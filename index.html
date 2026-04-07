@@ -22,13 +22,24 @@
 
       const karrusel = app.findObjectByName('Group 2');
 
-      let rotationSpeed = 0;
+      let rotationSpeed = 0.01; // default hastighed når musen ikke hover
+      let isHovering = false;
       let currentRotation = karrusel.rotation.y;
 
-      document.addEventListener('mousemove', (e) => {
-        const centerX = window.innerWidth / 2;
-        const distance = (e.clientX - centerX) / centerX;
-        rotationSpeed = distance * 0.03;
+      canvas.addEventListener('mouseenter', () => {
+        isHovering = true;
+      });
+
+      canvas.addEventListener('mouseleave', () => {
+        isHovering = false;
+        rotationSpeed = 0.01; // fortsæt med default hastighed når musen forlader
+      });
+
+      canvas.addEventListener('mousemove', (e) => {
+        if (!isHovering) return;
+        const centerX = canvas.offsetWidth / 2;
+        const distance = (e.clientX - centerX) / centerX; // -1 til 1
+        rotationSpeed = distance * 0.03; // negativ = mod uret, positiv = med uret
       });
 
       function animate() {
