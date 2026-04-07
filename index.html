@@ -39,7 +39,7 @@
         if (!isHovering) return;
         const centerX = canvas.offsetWidth / 2;
         const distance = (e.clientX - centerX) / centerX; // -1 til 1
-        rotationSpeed = distance * 0.03; // negativ = mod uret, positiv = med uret
+        rotationSpeed = distance * -0.03; // negativ = mod uret, positiv = med uret
       });
 
       function animate() {
