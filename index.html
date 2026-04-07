@@ -5,41 +5,55 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { width: 100vw; height: 100vh; overflow: hidden; background: transparent; }
+    #container { position: relative; width: 100%; height: 100%; }
     canvas { width: 100%; height: 100%; display: block; }
+    #overlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 10;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
-  <canvas id="spline-canvas"></canvas>
+  <div id="container">
+    <canvas id="spline-canvas"></canvas>
+    <div id="overlay"></div>
+  </div>
 
   <script type="module">
     import { Application } from 'https://unpkg.com/@splinetool/runtime@1.9.82/build/runtime.js';
 
     async function init() {
       const canvas = document.getElementById('spline-canvas');
+      const overlay = document.getElementById('overlay');
       const app = new Application(canvas);
 
       await app.load('https://prod.spline.design/g4VepyPEZWRZX1Vr/scene.splinecode');
 
       const karrusel = app.findObjectByName('Group 2');
 
-      let rotationSpeed = 0.01; // default hastighed når musen ikke hover
-      let isHovering = false;
+      let rotationSpeed = 0.01;
       let currentRotation = karrusel.rotation.y;
+      let isHovering = false;
 
-      canvas.addEventListener('mouseenter', () => {
-        isHovering = true;
-      });
+      // Brug document til at tracke om musen er over containeren
+      document.addEventListener('mousemove', (e) => {
+        const container = document.getElementById('container');
+        const rect = container.getBoundingClientRect();
+        
+        const insideX = e.clientX >= rect.left && e.clientX <= rect.right;
+        const insideY = e.clientY >= rect.top && e.clientY <= rect.bottom;
+        isHovering = insideX && insideY;
 
-      canvas.addEventListener('mouseleave', () => {
-        isHovering = false;
-        rotationSpeed = 0.01; // fortsæt med default hastighed når musen forlader
-      });
-
-      canvas.addEventListener('mousemove', (e) => {
-        if (!isHovering) return;
-        const centerX = canvas.offsetWidth / 2;
-        const distance = (e.clientX - centerX) / centerX; // -1 til 1
-        rotationSpeed = distance * -0.03; // negativ = mod uret, positiv = med uret
+        if (isHovering) {
+          const centerX = rect.left + rect.width / 2;
+          const distance = (e.clientX - centerX) / (rect.width / 2);
+          rotationSpeed = distance * -0.03;
+        } else {
+          rotationSpeed = 0.01;
+        }
       });
 
       function animate() {
