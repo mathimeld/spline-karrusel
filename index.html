@@ -58,7 +58,7 @@
           // Kvadratisk kurve så midten er meget langsom og kanten har maks hastighed
           const deadZone = 0.2; // jo højere, jo bredere midterzone
           const adjusted = Math.abs(distance) < deadZone ? 0 : (distance - Math.sign(distance) * deadZone) / (1 - deadZone);
-          const speedCurve = Math.sign(adjusted) * Math.pow(Math.abs(adjusted), 0.01);
+          const speedCurve = Math.sign(adjusted) * Math.pow(Math.abs(adjusted), 1);
           targetSpeed = speedCurve * -maxSpeed;
 
         } else {
