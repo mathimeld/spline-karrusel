@@ -35,8 +35,8 @@
         const canvasRect = canvas.getBoundingClientRect();
         
         // Vi estimerer karruselens bounds som den midterste 70% af canvas
-        const karruselLeft   = canvasRect.left   + canvasRect.width  * 0.15;
-        const karruselRight  = canvasRect.left   + canvasRect.width  * 0.85;
+        const karruselLeft   = canvasRect.left   + canvasRect.width  * 0.05;
+        const karruselRight  = canvasRect.left   + canvasRect.width  * 0.95;
         const karruselTop    = canvasRect.top    + canvasRect.height * 0.2;
         const karruselBottom = canvasRect.top    + canvasRect.height * 0.8;
 
@@ -56,7 +56,9 @@
           const distance = (e.clientX - karruselCenterX) / karruselHalfWidth;
           
           // Kvadratisk kurve så midten er meget langsom og kanten har maks hastighed
-          const speedCurve = distance * Math.abs(distance);
+          const deadZone = 0.2; // jo højere, jo bredere midterzone
+          const adjusted = Math.abs(distance) < deadZone ? 0 : (distance - Math.sign(distance) * deadZone) / (1 - deadZone);
+          const speedCurve = adjusted * Math.abs(adjusted);
           targetSpeed = speedCurve * -maxSpeed;
 
         } else {
