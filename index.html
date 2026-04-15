@@ -16,6 +16,16 @@
       const canvas = document.getElementById('spline-canvas');
       const app = new Application(canvas);
       await app.load('https://prod.spline.design/g4VepyPEZWRZX1Vr/scene.splinecode');
+      
+      // Simuler et klik for at trigge autoplay
+setTimeout(() => {
+  canvas.dispatchEvent(new MouseEvent('click', {
+    bubbles: true,
+    cancelable: true,
+    clientX: canvas.offsetWidth / 2,
+    clientY: canvas.offsetHeight / 2
+  }));
+}, 500);
 
       // Autoplay videoer så snart scenen er loadet
       app.addEventListener('start', () => {
