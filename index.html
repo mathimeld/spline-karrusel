@@ -10,57 +10,62 @@
 </head>
 <body>
   <canvas id="spline-canvas"></canvas>
-
   <script type="module">
     import { Application } from 'https://unpkg.com/@splinetool/runtime@1.9.82/build/runtime.js';
-
     async function init() {
       const canvas = document.getElementById('spline-canvas');
       const app = new Application(canvas);
-
       await app.load('https://prod.spline.design/g4VepyPEZWRZX1Vr/scene.splinecode');
 
+      // Autoplay videoer så snart scenen er loadet
+      app.addEventListener('start', () => {
+        const videos = document.querySelectorAll('video');
+        videos.forEach(v => {
+          v.muted = true;
+          v.play().catch(() => {});
+        });
+      });
+
+      // Fallback ved første musebevægelse
+      document.addEventListener('mousemove', () => {
+        const videos = document.querySelectorAll('video');
+        videos.forEach(v => {
+          if (v.paused) {
+            v.muted = true;
+            v.play().catch(() => {});
+          }
+        });
+      }, { once: true });
+
       const karrusel = app.findObjectByName('Group 2');
-
-      const defaultSpeed = -0.002;  // stille og rolig default rotation
-      const maxSpeed = 0.035;       // maksimal hastighed når musen er i kanten
-
+      const defaultSpeed = -0.002;
+      const maxSpeed = 0.035;
       let rotationSpeed = defaultSpeed;
       let targetSpeed = defaultSpeed;
       let currentRotation = karrusel.rotation.y;
       let isOverKarrusel = false;
 
       document.addEventListener('mousemove', (e) => {
-        // Karruselens omtrentlige position på skærmen
         const canvasRect = canvas.getBoundingClientRect();
-        
-        // Vi estimerer karruselens bounds som den midterste 70% af canvas
-        const karruselLeft   = canvasRect.left   + canvasRect.width  * 0.12;
-        const karruselRight  = canvasRect.left   + canvasRect.width  * 0.88;
-        const karruselTop    = canvasRect.top    + canvasRect.height * 0.2;
-        const karruselBottom = canvasRect.top    + canvasRect.height * 0.8;
-
+        const karruselLeft   = canvasRect.left + canvasRect.width  * 0.12;
+        const karruselRight  = canvasRect.left + canvasRect.width  * 0.88;
+        const karruselTop    = canvasRect.top  + canvasRect.height * 0.2;
+        const karruselBottom = canvasRect.top  + canvasRect.height * 0.8;
         const insideKarrusel = (
           e.clientX >= karruselLeft &&
           e.clientX <= karruselRight &&
           e.clientY >= karruselTop &&
           e.clientY <= karruselBottom
         );
-
         if (insideKarrusel) {
           isOverKarrusel = true;
           const karruselCenterX = (karruselLeft + karruselRight) / 2;
           const karruselHalfWidth = (karruselRight - karruselLeft) / 2;
-          
-          // distance fra -1 (venstre kant) til 1 (højre kant), 0 = midten
           const distance = (e.clientX - karruselCenterX) / karruselHalfWidth;
-          
-          // Kvadratisk kurve så midten er meget langsom og kanten har maks hastighed
-          const deadZone = 0.3; // jo højere, jo bredere midterzone
+          const deadZone = 0.3;
           const adjusted = Math.abs(distance) < deadZone ? 0 : (distance - Math.sign(distance) * deadZone) / (1 - deadZone);
           const speedCurve = Math.sign(adjusted) * Math.pow(Math.abs(adjusted), 0.9);
           targetSpeed = speedCurve * -maxSpeed;
-
         } else {
           isOverKarrusel = false;
           targetSpeed = defaultSpeed;
@@ -69,17 +74,13 @@
 
       function animate() {
         requestAnimationFrame(animate);
-        
-        // Blød overgang mellem nuværende og target hastighed
         rotationSpeed += (targetSpeed - rotationSpeed) * 0.05;
-        
         currentRotation += rotationSpeed;
         karrusel.rotation.y = currentRotation;
       }
 
       animate();
     }
-
     init();
   </script>
 </body>
