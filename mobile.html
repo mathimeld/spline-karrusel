@@ -7,25 +7,16 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: transparent; }
     canvas { width: 100%; height: 100%; display: block; }
-    #touch-layer {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      z-index: 10;
-      touch-action: none;
-    }
   </style>
 </head>
 <body>
   <canvas id="spline-canvas"></canvas>
-  <div id="touch-layer"></div>
 
   <script type="module">
     import { Application } from 'https://unpkg.com/@splinetool/runtime@1.9.82/build/runtime.js';
 
     async function init() {
       const canvas = document.getElementById('spline-canvas');
-      const touchLayer = document.getElementById('touch-layer');
       const app = new Application(canvas);
 
       await app.load('https://prod.spline.design/x0M6hgPubJwaAiWo/scene.splinecode');
@@ -50,28 +41,23 @@
       let rotationSpeed = defaultSpeed;
       let currentRotation = karrusel.rotation.y;
       let isTouching = false;
-      let clickLocked = false;
 
       let lastTouchY = null;
       let touchStartY = null;
-      let touchStartX = null;
       let hasMoved = false;
       let lastTimestamp = null;
       let rawVelocity = 0;
 
-      touchLayer.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        isTouching = true;
+      canvas.addEventListener('touchstart', (e) => {
         lastTouchY = e.touches[0].clientY;
         touchStartY = e.touches[0].clientY;
-        touchStartX = e.touches[0].clientX;
         lastTimestamp = Date.now();
         rawVelocity = 0;
         hasMoved = false;
-      }, { passive: false });
+        isTouching = true;
+      }, { passive: true });
 
-      touchLayer.addEventListener('touchmove', (e) => {
-        e.preventDefault();
+      canvas.addEventListener('touchmove', (e) => {
         const y = e.touches[0].clientY;
         const now = Date.now();
         const dt = Math.max(now - lastTimestamp, 1);
@@ -82,64 +68,11 @@
 
         lastTouchY = y;
         lastTimestamp = now;
-      }, { passive: false });
+      }, { passive: true });
 
-      touchLayer.addEventListener('touchend', (e) => {
-        e.preventDefault();
+      canvas.addEventListener('touchend', () => {
         isTouching = false;
-        const t = e.changedTouches[0];
-
-        if (!hasMoved && !clickLocked) {
-          clickLocked = true;
-
-          // Gem rotation så den ikke resetter
-          const savedRotation = currentRotation;
-
-          // Fjern laget så næste touch rammer Spline direkte
-          touchLayer.style.display = 'none';
-
-          // Simuler et præcist touch på canvas
-          const simulatedTouch = new Touch({
-            identifier: Date.now(),
-            target: canvas,
-            clientX: t.clientX,
-            clientY: t.clientY,
-            pageX: t.pageX,
-            pageY: t.pageY,
-            screenX: t.screenX,
-            screenY: t.screenY,
-            radiusX: 1, radiusY: 1,
-            rotationAngle: 0, force: 1
-          });
-
-          canvas.dispatchEvent(new TouchEvent('touchstart', {
-            bubbles: true, cancelable: true,
-            touches: [simulatedTouch],
-            targetTouches: [simulatedTouch],
-            changedTouches: [simulatedTouch]
-          }));
-
-          setTimeout(() => {
-            canvas.dispatchEvent(new TouchEvent('touchend', {
-              bubbles: true, cancelable: true,
-              touches: [],
-              targetTouches: [],
-              changedTouches: [simulatedTouch]
-            }));
-
-            // Gendan rotation hvis Spline har rykket den
-            currentRotation = savedRotation;
-            karrusel.rotation.y = currentRotation;
-
-            // Sæt laget tilbage igen
-            setTimeout(() => {
-              touchLayer.style.display = 'block';
-              clickLocked = false;
-            }, 100);
-
-          }, 80);
-        }
-      }, { passive: false });
+      }, { passive: true });
 
       function animate() {
         requestAnimationFrame(animate);
