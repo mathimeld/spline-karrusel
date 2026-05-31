@@ -47,38 +47,77 @@
 
       const karrusel = app.findObjectByName('Group 2');
       const defaultSpeed = 0.0008;
-      const maxSpeed = 0.012;
+      const maxSpeed = 0.04;        // Højere max hastighed
+      const momentumDecay = 0.97;   // Hvor længe momentum holder (0.99 = længe, 0.90 = kort)
       let rotationSpeed = defaultSpeed;
       let targetSpeed = defaultSpeed;
+      let momentum = 0;
       let currentRotation = karrusel.rotation.y;
 
       let lastTouchY = null;
       let touchVelocity = 0;
+      let touchStartY = null;
+      let touchStartTime = null;
+      let hasMoved = false;
 
       touchLayer.addEventListener('touchstart', (e) => {
         e.preventDefault();
         lastTouchY = e.touches[0].clientY;
+        touchStartY = e.touches[0].clientY;
+        touchStartTime = Date.now();
         touchVelocity = 0;
+        momentum = 0;
+        hasMoved = false;
       }, { passive: false });
 
       touchLayer.addEventListener('touchmove', (e) => {
         e.preventDefault();
         const y = e.touches[0].clientY;
         const deltaY = y - lastTouchY;
+
+        // Byg hastighed op baseret på hvor hurtigt fingeren bevæger sig
         touchVelocity = deltaY;
-        targetSpeed = (deltaY / canvas.offsetHeight) * maxSpeed * 80;
+
+        // Tillad momentum-opbygning – jo flere swipes, jo mere fart
+        momentum += deltaY * 0.003;
+        momentum = Math.max(-maxSpeed, Math.min(maxSpeed, momentum)); // clamp
+
+        targetSpeed = momentum;
+        hasMoved = Math.abs(y - touchStartY) > 8;
         lastTouchY = y;
       }, { passive: false });
 
       touchLayer.addEventListener('touchend', (e) => {
         e.preventDefault();
-        targetSpeed = touchVelocity * 0.003;
-        setTimeout(() => { targetSpeed = defaultSpeed; }, 800);
+
+        // Hvis fingeren næsten ikke bevægede sig = klik på projekt
+        if (!hasMoved) {
+          const touch = e.changedTouches[0];
+          touchLayer.style.pointerEvents = 'none';
+          const el = document.elementFromPoint(touch.clientX, touch.clientY);
+          if (el) el.click();
+          setTimeout(() => { touchLayer.style.pointerEvents = 'auto'; }, 300);
+          return;
+        }
+
+        // Bevar momentum og lad det fade ud
+        targetSpeed = momentum;
+        momentum = 0;
+
+        // Gradvist tilbage til default
+        const fadeInterval = setInterval(() => {
+          targetSpeed *= momentumDecay;
+          if (Math.abs(targetSpeed - defaultSpeed) < 0.0002) {
+            targetSpeed = defaultSpeed;
+            clearInterval(fadeInterval);
+          }
+        }, 16);
+
       }, { passive: false });
 
       function animate() {
         requestAnimationFrame(animate);
-        rotationSpeed += (targetSpeed - rotationSpeed) * 0.15;
+        rotationSpeed += (targetSpeed - rotationSpeed) * 0.12;
         currentRotation += rotationSpeed;
         karrusel.rotation.y = currentRotation;
       }
