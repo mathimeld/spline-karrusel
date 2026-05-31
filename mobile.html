@@ -50,29 +50,21 @@
       let rotationSpeed = defaultSpeed;
       let currentRotation = karrusel.rotation.y;
       let isTouching = false;
+      let clickLocked = false;
 
       let lastTouchY = null;
       let touchStartY = null;
+      let touchStartX = null;
       let hasMoved = false;
       let lastTimestamp = null;
       let rawVelocity = 0;
-
-      function sendClick(x, y) {
-        const events = [
-          new PointerEvent('pointerdown', { bubbles: true, cancelable: true, clientX: x, clientY: y, pointerId: 1, pointerType: 'touch' }),
-          new MouseEvent('mousedown',     { bubbles: true, cancelable: true, clientX: x, clientY: y }),
-          new PointerEvent('pointerup',   { bubbles: true, cancelable: true, clientX: x, clientY: y, pointerId: 1, pointerType: 'touch' }),
-          new MouseEvent('mouseup',       { bubbles: true, cancelable: true, clientX: x, clientY: y }),
-          new MouseEvent('click',         { bubbles: true, cancelable: true, clientX: x, clientY: y }),
-        ];
-        events.forEach(ev => canvas.dispatchEvent(ev));
-      }
 
       touchLayer.addEventListener('touchstart', (e) => {
         e.preventDefault();
         isTouching = true;
         lastTouchY = e.touches[0].clientY;
         touchStartY = e.touches[0].clientY;
+        touchStartX = e.touches[0].clientX;
         lastTimestamp = Date.now();
         rawVelocity = 0;
         hasMoved = false;
@@ -97,8 +89,55 @@
         isTouching = false;
         const t = e.changedTouches[0];
 
-        if (!hasMoved) {
-          sendClick(t.clientX, t.clientY);
+        if (!hasMoved && !clickLocked) {
+          clickLocked = true;
+
+          // Gem rotation så den ikke resetter
+          const savedRotation = currentRotation;
+
+          // Fjern laget så næste touch rammer Spline direkte
+          touchLayer.style.display = 'none';
+
+          // Simuler et præcist touch på canvas
+          const simulatedTouch = new Touch({
+            identifier: Date.now(),
+            target: canvas,
+            clientX: t.clientX,
+            clientY: t.clientY,
+            pageX: t.pageX,
+            pageY: t.pageY,
+            screenX: t.screenX,
+            screenY: t.screenY,
+            radiusX: 1, radiusY: 1,
+            rotationAngle: 0, force: 1
+          });
+
+          canvas.dispatchEvent(new TouchEvent('touchstart', {
+            bubbles: true, cancelable: true,
+            touches: [simulatedTouch],
+            targetTouches: [simulatedTouch],
+            changedTouches: [simulatedTouch]
+          }));
+
+          setTimeout(() => {
+            canvas.dispatchEvent(new TouchEvent('touchend', {
+              bubbles: true, cancelable: true,
+              touches: [],
+              targetTouches: [],
+              changedTouches: [simulatedTouch]
+            }));
+
+            // Gendan rotation hvis Spline har rykket den
+            currentRotation = savedRotation;
+            karrusel.rotation.y = currentRotation;
+
+            // Sæt laget tilbage igen
+            setTimeout(() => {
+              touchLayer.style.display = 'block';
+              clickLocked = false;
+            }, 100);
+
+          }, 80);
         }
       }, { passive: false });
 
