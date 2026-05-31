@@ -7,16 +7,25 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: transparent; }
     canvas { width: 100%; height: 100%; display: block; }
+    #touch-layer {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 10;
+      touch-action: none;
+    }
   </style>
 </head>
 <body>
   <canvas id="spline-canvas"></canvas>
+  <div id="touch-layer"></div>
 
   <script type="module">
     import { Application } from 'https://unpkg.com/@splinetool/runtime@1.9.82/build/runtime.js';
 
     async function init() {
       const canvas = document.getElementById('spline-canvas');
+      const touchLayer = document.getElementById('touch-layer');
       const app = new Application(canvas);
 
       await app.load('https://prod.spline.design/x0M6hgPubJwaAiWo/scene.splinecode');
@@ -48,16 +57,52 @@
       let lastTimestamp = null;
       let rawVelocity = 0;
 
-      canvas.addEventListener('touchstart', (e) => {
+      // Projekter med deres Y-rotation i radianer og URL
+      const projekter = [
+        { navn: 'SAA new',      url: 'https://livandmathias.com/becomeanaddict', deg: 2 },
+        { navn: 'FL01',         url: 'https://livandmathias.com/flatlist',       deg: -57 },
+        { navn: 'Pære',         url: 'https://livandmathias.com/paeren',         deg: 34 },
+        { navn: 'XBOX',         url: 'https://livandmathias.com/everyscreen',    deg: 90 },
+        { navn: 'Livpic',       url: 'https://livandmathias.com/about',          deg: 67 },
+        { navn: 'Trusser',      url: 'https://livandmathias.com/dischargetag',   deg: 19 },
+        { navn: 'FL02',         url: 'https://livandmathias.com/flatlist',       deg: -12 },
+        { navn: 'FL03',         url: 'https://livandmathias.com/flatlist',       deg: -40 },
+        { navn: 'Mathiasny',    url: 'https://livandmathias.com/about',          deg: -81 },
+        { navn: 'Klovn',        url: 'https://livandmathias.com/enpausefraalvoren', deg: -31 },
+        { navn: 'Duo til port', url: 'https://livandmathias.com/lovelingo',      deg: -64 },
+      ].map(p => ({ ...p, rad: p.deg * (Math.PI / 180) }));
+
+      // Find det projekt der er tættest på front (rotation = 0)
+      function getNaermesteProjekt(rotation) {
+        // Normaliser current rotation til 0-2π
+        let norm = rotation % (Math.PI * 2);
+
+        let bedste = null;
+        let mindsteAfstand = Infinity;
+
+        for (const p of projekter) {
+          // Beregn afstand mellem nuværende rotation og projektets vinkel
+          let afstand = Math.abs((norm - p.rad + Math.PI * 3) % (Math.PI * 2) - Math.PI);
+          if (afstand < mindsteAfstand) {
+            mindsteAfstand = afstand;
+            bedste = p;
+          }
+        }
+        return bedste;
+      }
+
+      touchLayer.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        isTouching = true;
         lastTouchY = e.touches[0].clientY;
         touchStartY = e.touches[0].clientY;
         lastTimestamp = Date.now();
         rawVelocity = 0;
         hasMoved = false;
-        isTouching = true;
-      }, { passive: true });
+      }, { passive: false });
 
-      canvas.addEventListener('touchmove', (e) => {
+      touchLayer.addEventListener('touchmove', (e) => {
+        e.preventDefault();
         const y = e.touches[0].clientY;
         const now = Date.now();
         const dt = Math.max(now - lastTimestamp, 1);
@@ -68,11 +113,20 @@
 
         lastTouchY = y;
         lastTimestamp = now;
-      }, { passive: true });
+      }, { passive: false });
 
-      canvas.addEventListener('touchend', () => {
+      touchLayer.addEventListener('touchend', (e) => {
+        e.preventDefault();
         isTouching = false;
-      }, { passive: true });
+        const t = e.changedTouches[0];
+
+        if (!hasMoved) {
+          const projekt = getNaermesteProjekt(currentRotation);
+          if (projekt) {
+            window.open(projekt.url, '_blank');
+          }
+        }
+      }, { passive: false });
 
       function animate() {
         requestAnimationFrame(animate);
