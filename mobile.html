@@ -47,6 +47,119 @@
 
       const karrusel = app.findObjectByName('Group 2');
       const defaultSpeed = 0.0008;
+      let rotationSpeed = defaultSpeed;
+      let currentRotation = karrusel.rotation.y;
+
+      let lastTouchY = null;
+      let touchStartY = null;
+      let touchStartX = null;
+      let velocity = 0;
+      let hasMoved = false;
+      let lastTimestamp = null;
+
+      // Hjælpefunktion til at sende touch-events til Spline
+      function dispatchTouchToCanvas(type, x, y) {
+        const touch = new Touch({
+          identifier: 1,
+          target: canvas,
+          clientX: x,
+          clientY: y,
+          pageX: x,
+          pageY: y,
+          screenX: x,
+          screenY: y,
+          radiusX: 1,
+          radiusY: 1,
+          rotationAngle: 0,
+          force: 1
+        });
+        const event = new TouchEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          touches: type === 'touchend' ? [] : [touch],
+          targetTouches: type === 'touchend' ? [] : [touch],
+          changedTouches: [touch]
+        });
+        canvas.dispatchEvent(event);
+      }
+
+      touchLayer.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const t = e.touches[0];
+        lastTouchY = t.clientY;
+        touchStartY = t.clientY;
+        touchStartX = t.clientX;
+        lastTimestamp = Date.now();
+        velocity = 0;
+        hasMoved = false;
+      }, { passive: false });
+
+      touchLayer.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        const t = e.touches[0];
+        const now = Date.now();
+        const dt = Math.max(now - lastTimestamp, 1);
+        const deltaY = t.clientY - lastTouchY;
+
+        // Velocity i pixels per millisekund
+        velocity = deltaY / dt;
+        hasMoved = Math.abs(t.clientY - touchStartY) > 6;
+
+        // Direkte og responsiv – ingen lerp her, bare sæt speed direkte
+        rotationSpeed = velocity * 0.08;
+
+        lastTouchY = t.clientY;
+        lastTimestamp = now;
+      }, { passive: false });
+
+      touchLayer.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        const t = e.changedTouches[0];
+
+        if (!hasMoved) {
+          // Det var et klik – send touch til Spline
+          dispatchTouchToCanvas('touchstart', t.clientX, t.clientY);
+          setTimeout(() => {
+            dispatchTouchToCanvas('touchend', t.clientX, t.clientY);
+          }, 80);
+          return;
+        }
+
+        // Momentum fortsætter og fader ud
+        const fade = setInterval(() => {
+          rotationSpeed *= 0.95;
+          if (Math.abs(rotationSpeed) < Math.abs(defaultSpeed) * 1.5) {
+            rotationSpeed = defaultSpeed;
+            clearInterval(fade);
+          }
+        }, 16);
+
+      }, { passive: false });
+
+      function animate() {
+        requestAnimationFrame(animate);
+        currentRotation += rotationSpeed;
+        karrusel.rotation.y = currentRotation;
+      }
+      animate();
+    }
+
+    init();
+  </script>
+</body>
+</html>          clientY: canvas.offsetHeight / 2
+        }));
+      }, 500);
+
+      app.addEventListener('start', () => {
+        document.querySelectorAll('video').forEach(v => {
+          v.muted = true;
+          v.play().catch(() => {});
+        });
+      });
+
+      const karrusel = app.findObjectByName('Group 2');
+      const defaultSpeed = 0.0008;
       const maxSpeed = 0.04;        // Højere max hastighed
       const momentumDecay = 0.97;   // Hvor længe momentum holder (0.99 = længe, 0.90 = kort)
       let rotationSpeed = defaultSpeed;
