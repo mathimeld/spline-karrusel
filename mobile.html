@@ -47,10 +47,7 @@
 
       const karrusel = app.findObjectByName('Group 2');
       const defaultSpeed = 0.0016;
-      const maxSpeed = 0.025;      // Loft – ikke højere end dette
-      const sensitivity = 0.08;   // Tilbage til hvad der virkede
-      const acceleration = 0.15;
-      let velocity = defaultSpeed;
+      let rotationSpeed = defaultSpeed;
       let currentRotation = karrusel.rotation.y;
       let isTouching = false;
 
@@ -59,10 +56,6 @@
       let hasMoved = false;
       let lastTimestamp = null;
       let rawVelocity = 0;
-
-      function clamp(val, min, max) {
-        return Math.max(min, Math.min(max, val));
-      }
 
       function dispatchTouchToCanvas(type, x, y) {
         const touch = new Touch({
@@ -99,12 +92,9 @@
         const dt = Math.max(now - lastTimestamp, 1);
         const deltaY = y - lastTouchY;
 
-        rawVelocity = rawVelocity * 0.6 + (deltaY / dt) * sensitivity * 0.4;
-
-        // Loft på råhastighed – max 60% af maxSpeed per frame
-        rawVelocity = clamp(rawVelocity, -maxSpeed * 0.6, maxSpeed * 0.6);
-
+        rawVelocity = rawVelocity * 0.6 + (deltaY / dt) * 0.08 * 0.4;
         hasMoved = Math.abs(y - touchStartY) > 6;
+
         lastTouchY = y;
         lastTimestamp = now;
       }, { passive: false });
@@ -124,13 +114,12 @@
         requestAnimationFrame(animate);
 
         if (isTouching && hasMoved) {
-          velocity += (rawVelocity - velocity) * acceleration;
+          rotationSpeed += (rawVelocity * 0.12 - rotationSpeed) * 0.4;
         } else {
-          velocity += (defaultSpeed - velocity) * 0.035;
+          rotationSpeed += (defaultSpeed - rotationSpeed) * 0.035;
         }
 
-        velocity = clamp(velocity, -maxSpeed, maxSpeed);
-        currentRotation += velocity;
+        currentRotation += rotationSpeed;
         karrusel.rotation.y = currentRotation;
       }
 
