@@ -46,9 +46,10 @@
       });
 
       const karrusel = app.findObjectByName('Group 2');
-      const defaultSpeed = 0.0008;
+      const defaultSpeed = 0.0016;  // Dobbelt op
       let rotationSpeed = defaultSpeed;
       let currentRotation = karrusel.rotation.y;
+      let fadeInterval = null;
 
       let lastTouchY = null;
       let touchStartY = null;
@@ -57,7 +58,6 @@
       let hasMoved = false;
       let lastTimestamp = null;
 
-      // Hjælpefunktion til at sende touch-events til Spline
       function dispatchTouchToCanvas(type, x, y) {
         const touch = new Touch({
           identifier: 1,
@@ -92,6 +92,12 @@
         lastTimestamp = Date.now();
         velocity = 0;
         hasMoved = false;
+
+        // Stop evt. igangværende fade når nyt swipe starter
+        if (fadeInterval) {
+          clearInterval(fadeInterval);
+          fadeInterval = null;
+        }
       }, { passive: false });
 
       touchLayer.addEventListener('touchmove', (e) => {
@@ -101,12 +107,11 @@
         const dt = Math.max(now - lastTimestamp, 1);
         const deltaY = t.clientY - lastTouchY;
 
-        // Velocity i pixels per millisekund
         velocity = deltaY / dt;
         hasMoved = Math.abs(t.clientY - touchStartY) > 6;
 
-        // Direkte og responsiv – ingen lerp her, bare sæt speed direkte
-        rotationSpeed = velocity * 0.08;
+        // Blend ny velocity ind i eksisterende speed for smooth overgang ved flere swipes
+        rotationSpeed = rotationSpeed * 0.3 + velocity * 0.08 * 0.7;
 
         lastTouchY = t.clientY;
         lastTimestamp = now;
@@ -117,7 +122,6 @@
         const t = e.changedTouches[0];
 
         if (!hasMoved) {
-          // Det var et klik – send touch til Spline
           dispatchTouchToCanvas('touchstart', t.clientX, t.clientY);
           setTimeout(() => {
             dispatchTouchToCanvas('touchend', t.clientX, t.clientY);
@@ -125,104 +129,15 @@
           return;
         }
 
-        // Momentum fortsætter og fader ud
-        const fade = setInterval(() => {
-          rotationSpeed *= 0.95;
-          if (Math.abs(rotationSpeed) < Math.abs(defaultSpeed) * 1.5) {
+        // Fade gradvist tilbage til default – uden hak
+        fadeInterval = setInterval(() => {
+          const diff = rotationSpeed - defaultSpeed;
+          if (Math.abs(diff) < 0.00005) {
             rotationSpeed = defaultSpeed;
-            clearInterval(fade);
-          }
-        }, 16);
-
-      }, { passive: false });
-
-      function animate() {
-        requestAnimationFrame(animate);
-        currentRotation += rotationSpeed;
-        karrusel.rotation.y = currentRotation;
-      }
-      animate();
-    }
-
-    init();
-  </script>
-</body>
-</html>          clientY: canvas.offsetHeight / 2
-        }));
-      }, 500);
-
-      app.addEventListener('start', () => {
-        document.querySelectorAll('video').forEach(v => {
-          v.muted = true;
-          v.play().catch(() => {});
-        });
-      });
-
-      const karrusel = app.findObjectByName('Group 2');
-      const defaultSpeed = 0.0008;
-      const maxSpeed = 0.04;        // Højere max hastighed
-      const momentumDecay = 0.97;   // Hvor længe momentum holder (0.99 = længe, 0.90 = kort)
-      let rotationSpeed = defaultSpeed;
-      let targetSpeed = defaultSpeed;
-      let momentum = 0;
-      let currentRotation = karrusel.rotation.y;
-
-      let lastTouchY = null;
-      let touchVelocity = 0;
-      let touchStartY = null;
-      let touchStartTime = null;
-      let hasMoved = false;
-
-      touchLayer.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        lastTouchY = e.touches[0].clientY;
-        touchStartY = e.touches[0].clientY;
-        touchStartTime = Date.now();
-        touchVelocity = 0;
-        momentum = 0;
-        hasMoved = false;
-      }, { passive: false });
-
-      touchLayer.addEventListener('touchmove', (e) => {
-        e.preventDefault();
-        const y = e.touches[0].clientY;
-        const deltaY = y - lastTouchY;
-
-        // Byg hastighed op baseret på hvor hurtigt fingeren bevæger sig
-        touchVelocity = deltaY;
-
-        // Tillad momentum-opbygning – jo flere swipes, jo mere fart
-        momentum += deltaY * 0.003;
-        momentum = Math.max(-maxSpeed, Math.min(maxSpeed, momentum)); // clamp
-
-        targetSpeed = momentum;
-        hasMoved = Math.abs(y - touchStartY) > 8;
-        lastTouchY = y;
-      }, { passive: false });
-
-      touchLayer.addEventListener('touchend', (e) => {
-        e.preventDefault();
-
-        // Hvis fingeren næsten ikke bevægede sig = klik på projekt
-        if (!hasMoved) {
-          const touch = e.changedTouches[0];
-          touchLayer.style.pointerEvents = 'none';
-          const el = document.elementFromPoint(touch.clientX, touch.clientY);
-          if (el) el.click();
-          setTimeout(() => { touchLayer.style.pointerEvents = 'auto'; }, 300);
-          return;
-        }
-
-        // Bevar momentum og lad det fade ud
-        targetSpeed = momentum;
-        momentum = 0;
-
-        // Gradvist tilbage til default
-        const fadeInterval = setInterval(() => {
-          targetSpeed *= momentumDecay;
-          if (Math.abs(targetSpeed - defaultSpeed) < 0.0002) {
-            targetSpeed = defaultSpeed;
             clearInterval(fadeInterval);
+            fadeInterval = null;
+          } else {
+            rotationSpeed -= diff * 0.04;
           }
         }, 16);
 
@@ -230,7 +145,6 @@
 
       function animate() {
         requestAnimationFrame(animate);
-        rotationSpeed += (targetSpeed - rotationSpeed) * 0.12;
         currentRotation += rotationSpeed;
         karrusel.rotation.y = currentRotation;
       }
