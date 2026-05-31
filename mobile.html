@@ -5,17 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: transparent; touch-action: none; }
-    canvas { width: 100%; height: 100%; display: block; touch-action: none; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: transparent; }
+    canvas { width: 100%; height: 100%; display: block; }
+    #touch-layer {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 10;
+      touch-action: none;
+    }
   </style>
 </head>
 <body>
   <canvas id="spline-canvas"></canvas>
+  <div id="touch-layer"></div>
+
   <script type="module">
     import { Application } from 'https://unpkg.com/@splinetool/runtime@1.9.82/build/runtime.js';
 
     async function init() {
       const canvas = document.getElementById('spline-canvas');
+      const touchLayer = document.getElementById('touch-layer');
       const app = new Application(canvas);
 
       await app.load('https://prod.spline.design/x0M6hgPubJwaAiWo/scene.splinecode');
@@ -42,60 +52,29 @@
       let targetSpeed = defaultSpeed;
       let currentRotation = karrusel.rotation.y;
 
-      let lastTouchX = null;
       let lastTouchY = null;
       let touchVelocity = 0;
-      let isTouching = false;
-      let isOurSwipe = null;
 
-      canvas.addEventListener('touchstart', (e) => {
-        lastTouchX = e.touches[0].clientX;
+      touchLayer.addEventListener('touchstart', (e) => {
+        e.preventDefault();
         lastTouchY = e.touches[0].clientY;
-        isTouching = true;
         touchVelocity = 0;
-        isOurSwipe = null;
-      }, { passive: false, capture: true });
+      }, { passive: false });
 
-      canvas.addEventListener('touchmove', (e) => {
-        if (!isTouching) return;
-
-        const x = e.touches[0].clientX;
+      touchLayer.addEventListener('touchmove', (e) => {
+        e.preventDefault();
         const y = e.touches[0].clientY;
-        const deltaX = x - lastTouchX;
         const deltaY = y - lastTouchY;
-
-        if (isOurSwipe === null) {
-          if (Math.abs(deltaY) > Math.abs(deltaX) + 3) {
-            isOurSwipe = true;
-          } else if (Math.abs(deltaX) > Math.abs(deltaY) + 3) {
-            isOurSwipe = false;
-          }
-        }
-
-        if (isOurSwipe === true) {
-          e.preventDefault();
-          e.stopPropagation();
-          touchVelocity = deltaY;
-          targetSpeed = (deltaY / canvas.offsetHeight) * -maxSpeed * 80;
-        }
-
-        lastTouchX = x;
+        touchVelocity = deltaY;
+        targetSpeed = (deltaY / canvas.offsetHeight) * -maxSpeed * 80;
         lastTouchY = y;
-      }, { passive: false, capture: true });
+      }, { passive: false });
 
-      canvas.addEventListener('touchend', (e) => {
-        if (!isTouching) return;
-        isTouching = false;
-
-        if (isOurSwipe === true) {
-          e.preventDefault();
-          e.stopPropagation();
-          targetSpeed = touchVelocity * -0.003;
-          setTimeout(() => { targetSpeed = defaultSpeed; }, 800);
-        }
-
-        isOurSwipe = null;
-      }, { passive: false, capture: true });
+      touchLayer.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        targetSpeed = touchVelocity * -0.003;
+        setTimeout(() => { targetSpeed = defaultSpeed; }, 800);
+      }, { passive: false });
 
       function animate() {
         requestAnimationFrame(animate);
