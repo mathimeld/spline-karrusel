@@ -53,42 +53,51 @@
 
       let lastTouchY = null;
       let touchStartY = null;
+      let touchStartScreenY = null;
       let hasMoved = false;
       let lastTimestamp = null;
       let rawVelocity = 0;
 
-      // Projekter med deres Y-rotation i radianer og URL
       const projekter = [
-        { navn: 'SAA new',      url: 'https://livandmathias.com/becomeanaddict', deg: 2 },
-        { navn: 'FL01',         url: 'https://livandmathias.com/flatlist',       deg: -57 },
-        { navn: 'Pære',         url: 'https://livandmathias.com/paeren',         deg: 34 },
-        { navn: 'XBOX',         url: 'https://livandmathias.com/everyscreen',    deg: 90 },
-        { navn: 'Livpic',       url: 'https://livandmathias.com/about',          deg: 67 },
-        { navn: 'Trusser',      url: 'https://livandmathias.com/dischargetag',   deg: 19 },
-        { navn: 'FL02',         url: 'https://livandmathias.com/flatlist',       deg: -12 },
-        { navn: 'FL03',         url: 'https://livandmathias.com/flatlist',       deg: -40 },
-        { navn: 'Mathiasny',    url: 'https://livandmathias.com/about',          deg: -81 },
-        { navn: 'Klovn',        url: 'https://livandmathias.com/enpausefraalvoren', deg: -31 },
-        { navn: 'Duo til port', url: 'https://livandmathias.com/lovelingo',      deg: -64 },
+        { navn: 'SAA new',      url: 'https://livandmathias.com/becomeanaddict',     deg: 2 },
+        { navn: 'FL01',         url: 'https://livandmathias.com/flatlist',           deg: -57 },
+        { navn: 'Pære',         url: 'https://livandmathias.com/paeren',             deg: 34 },
+        { navn: 'XBOX',         url: 'https://livandmathias.com/everyscreen',        deg: 90 },
+        { navn: 'Livpic',       url: 'https://livandmathias.com/about',              deg: 67 },
+        { navn: 'Trusser',      url: 'https://livandmathias.com/dischargetag',       deg: 19 },
+        { navn: 'FL02',         url: 'https://livandmathias.com/flatlist',           deg: -12 },
+        { navn: 'FL03',         url: 'https://livandmathias.com/flatlist',           deg: -40 },
+        { navn: 'Mathiasny',    url: 'https://livandmathias.com/about',              deg: -81 },
+        { navn: 'Klovn',        url: 'https://livandmathias.com/enpausefraalvoren',  deg: -31 },
+        { navn: 'Duo til port', url: 'https://livandmathias.com/lovelingo',          deg: -64 },
       ].map(p => ({ ...p, rad: p.deg * (Math.PI / 180) }));
 
-      // Find det projekt der er tættest på front (rotation = 0)
-      function getNaermesteProjekt(rotation) {
-        // Normaliser current rotation til 0-2π
+      // Sorter projekter efter vinkel så vi kan finde naboer
+      const sorteret = [...projekter].sort((a, b) => a.rad - b.rad);
+
+      function getNaermeste(rotation, offset = 0) {
         let norm = rotation % (Math.PI * 2);
+        if (norm > Math.PI) norm -= Math.PI * 2;
+        if (norm < -Math.PI) norm += Math.PI * 2;
 
-        let bedste = null;
+        // Find index på nærmeste projekt
         let mindsteAfstand = Infinity;
+        let naermestIndex = 0;
 
-        for (const p of projekter) {
-          // Beregn afstand mellem nuværende rotation og projektets vinkel
-          let afstand = Math.abs((norm - p.rad + Math.PI * 3) % (Math.PI * 2) - Math.PI);
+        for (let i = 0; i < sorteret.length; i++) {
+          let diff = norm - sorteret[i].rad;
+          while (diff > Math.PI) diff -= Math.PI * 2;
+          while (diff < -Math.PI) diff += Math.PI * 2;
+          const afstand = Math.abs(diff);
           if (afstand < mindsteAfstand) {
             mindsteAfstand = afstand;
-            bedste = p;
+            naermestIndex = i;
           }
         }
-        return bedste;
+
+        // Offset: -1 = én foran, 0 = midten, +1 = én bagved
+        const index = (naermestIndex + offset + sorteret.length) % sorteret.length;
+        return sorteret[index];
       }
 
       touchLayer.addEventListener('touchstart', (e) => {
@@ -96,6 +105,7 @@
         isTouching = true;
         lastTouchY = e.touches[0].clientY;
         touchStartY = e.touches[0].clientY;
+        touchStartScreenY = e.touches[0].clientY;
         lastTimestamp = Date.now();
         rawVelocity = 0;
         hasMoved = false;
@@ -118,12 +128,22 @@
       touchLayer.addEventListener('touchend', (e) => {
         e.preventDefault();
         isTouching = false;
-        const t = e.changedTouches[0];
 
         if (!hasMoved) {
-          const projekt = getNaermesteProjekt(currentRotation);
+          const screenHeight = window.innerHeight;
+          const tapY = touchStartScreenY;
+          const tredjedel = screenHeight / 3;
+
+          let offset = 0;
+          if (tapY < tredjedel) {
+            offset = -1; // Øverste zone → projekt foran
+          } else if (tapY > tredjedel * 2) {
+            offset = 1;  // Nederste zone → projekt bagved
+          }
+
+          const projekt = getNaermeste(currentRotation, offset);
           if (projekt) {
-            window.open(projekt.url, '_blank');
+            window.top.location.href = projekt.url;
           }
         }
       }, { passive: false });
