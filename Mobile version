@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { width: 100vw; height: 100vh; overflow: hidden; background: transparent; }
+    canvas { width: 100%; height: 100%; display: block; }
+  </style>
+</head>
+<body>
+  <canvas id="spline-canvas"></canvas>
+  <script type="module">
+    import { Application } from 'https://unpkg.com/@splinetool/runtime@1.9.82/build/runtime.js';
+
+    async function init() {
+      const canvas = document.getElementById('spline-canvas');
+      const app = new Application(canvas);
+
+      // 👇 SKIFT DENNE URL til din nye mobil-scene URL
+      await app.load('https://prod.spline.design/x0M6hgPubJwaAiWo/scene.splinecode');
+
+      // Autoplay trick
+      setTimeout(() => {
+        canvas.dispatchEvent(new MouseEvent('click', {
+          bubbles: true, cancelable: true,
+          clientX: canvas.offsetWidth / 2,
+          clientY: canvas.offsetHeight / 2
+        }));
+      }, 500);
+
+      // Autoplay videoer
+      app.addEventListener('start', () => {
+        document.querySelectorAll('video').forEach(v => {
+          v.muted = true;
+          v.play().catch(() => {});
+        });
+      });
+
+      const karrusel = app.findObjectByName('Group 2');
+      const defaultSpeed = -0.0008;
+      const maxSpeed = 0.012;
+      let rotationSpeed = defaultSpeed;
+      let targetSpeed = defaultSpeed;
+      let currentRotation = karrusel.rotation.y;
+
+      // ── Touch-styring til mobil ──────────────────────────
+      let touchStartX = null;
+      let lastTouchX = null;
+      let touchVelocity = 0;
+      let isTouching = false;
+
+      canvas.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+        lastTouchX = touchStartX;
+        isTouching = true;
+        touchVelocity = 0;
+      }, { passive: true });
+
+      canvas.addEventListener('touchmove', (e) => {
+        if (!isTouching) return;
+        const x = e.touches[0].clientX;
+        const delta = x - lastTouchX;
+        touchVelocity = delta;
+        targetSpeed = (delta / canvas.offsetWidth) * -maxSpeed * 80;
+        lastTouchX = x;
+      }, { passive: true });
+
+      canvas.addEventListener('touchend', () => {
+        isTouching = false;
+        // Bevar lidt momentum efter slip
+        targetSpeed = touchVelocity * -0.003;
+        // Vend tilbage til default efter kort tid
+        setTimeout(() => {
+          targetSpeed = defaultSpeed;
+        }, 800);
+      });
+
+      // ── Animationsloop ───────────────────────────────────
+      function animate() {
+        requestAnimationFrame(animate);
+        rotationSpeed += (targetSpeed - rotationSpeed) * 0.05;
+        currentRotation += rotationSpeed;
+        karrusel.rotation.y = currentRotation;
+      }
+      animate();
+    }
+
+    init();
+  </script>
+</body>
+</html>
