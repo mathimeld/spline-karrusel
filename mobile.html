@@ -63,4 +63,62 @@
           new MouseEvent('mousedown',     { bubbles: true, cancelable: true, clientX: x, clientY: y }),
           new PointerEvent('pointerup',   { bubbles: true, cancelable: true, clientX: x, clientY: y, pointerId: 1, pointerType: 'touch' }),
           new MouseEvent('mouseup',       { bubbles: true, cancelable: true, clientX: x, clientY: y }),
-          new MouseEvent('click',         { bubbles: true, cancelable: true, clientX
+          new MouseEvent('click',         { bubbles: true, cancelable: true, clientX: x, clientY: y }),
+        ];
+        events.forEach(ev => canvas.dispatchEvent(ev));
+      }
+
+      touchLayer.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        isTouching = true;
+        lastTouchY = e.touches[0].clientY;
+        touchStartY = e.touches[0].clientY;
+        lastTimestamp = Date.now();
+        rawVelocity = 0;
+        hasMoved = false;
+      }, { passive: false });
+
+      touchLayer.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        const y = e.touches[0].clientY;
+        const now = Date.now();
+        const dt = Math.max(now - lastTimestamp, 1);
+        const deltaY = y - lastTouchY;
+
+        rawVelocity = rawVelocity * 0.6 + (deltaY / dt) * 0.08 * 0.4;
+        hasMoved = Math.abs(y - touchStartY) > 6;
+
+        lastTouchY = y;
+        lastTimestamp = now;
+      }, { passive: false });
+
+      touchLayer.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        isTouching = false;
+        const t = e.changedTouches[0];
+
+        if (!hasMoved) {
+          sendClick(t.clientX, t.clientY);
+        }
+      }, { passive: false });
+
+      function animate() {
+        requestAnimationFrame(animate);
+
+        if (isTouching && hasMoved) {
+          rotationSpeed += (rawVelocity * 0.12 - rotationSpeed) * 0.4;
+        } else {
+          rotationSpeed += (defaultSpeed - rotationSpeed) * 0.035;
+        }
+
+        currentRotation += rotationSpeed;
+        karrusel.rotation.y = currentRotation;
+      }
+
+      animate();
+    }
+
+    init();
+  </script>
+</body>
+</html>
