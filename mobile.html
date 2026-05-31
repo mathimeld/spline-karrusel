@@ -46,7 +46,7 @@
       });
 
       const karrusel = app.findObjectByName('Group 2');
-      const defaultSpeed = -0.0008;
+      const defaultSpeed = 0.0008;
       const maxSpeed = 0.012;
       let rotationSpeed = defaultSpeed;
       let targetSpeed = defaultSpeed;
@@ -66,19 +66,19 @@
         const y = e.touches[0].clientY;
         const deltaY = y - lastTouchY;
         touchVelocity = deltaY;
-        targetSpeed = (deltaY / canvas.offsetHeight) * -maxSpeed * 80;
+        targetSpeed = (deltaY / canvas.offsetHeight) * maxSpeed * 80;
         lastTouchY = y;
       }, { passive: false });
 
       touchLayer.addEventListener('touchend', (e) => {
         e.preventDefault();
-        targetSpeed = touchVelocity * -0.003;
+        targetSpeed = touchVelocity * 0.003;
         setTimeout(() => { targetSpeed = defaultSpeed; }, 800);
       }, { passive: false });
 
       function animate() {
         requestAnimationFrame(animate);
-        rotationSpeed += (targetSpeed - rotationSpeed) * 0.05;
+        rotationSpeed += (targetSpeed - rotationSpeed) * 0.15;
         currentRotation += rotationSpeed;
         karrusel.rotation.y = currentRotation;
       }
