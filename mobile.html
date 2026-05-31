@@ -46,9 +46,9 @@
       });
 
       const karrusel = app.findObjectByName('Group 2');
-      const defaultSpeed = 0.0016;
-      const maxSpeed = 0.018;        // Absolut max – kan ikke komme hurtigere end dette
-      const acceleration = 0.15;    // Hvor hurtigt den bygger fart op (lavere = blødere opstart)
+      const defaultSpeed = 0.0016;  // Autorotation
+      const maxSpeed = 0.008;       // Absolut loft – halveret fra sidst
+      const acceleration = 0.08;   // Træg opbygning – kræver længere swipe
       let velocity = defaultSpeed;
       let currentRotation = karrusel.rotation.y;
       let isTouching = false;
@@ -98,12 +98,9 @@
         const dt = Math.max(now - lastTimestamp, 1);
         const deltaY = y - lastTouchY;
 
-        // Glidende gennemsnit – jævner uregelmæssige touch-samples ud
-        // * 0.06 i stedet for 0.12 = halvt så sensitiv per pixel
-        rawVelocity = rawVelocity * 0.6 + (deltaY / dt) * 0.06 * 0.4;
-
-        // Clamp råhastighed så et enkelt hurtigt swipe ikke sender den i mål med det samme
-        rawVelocity = clamp(rawVelocity, -maxSpeed * 0.4, maxSpeed * 0.4);
+        // Meget lavere sensitivitet: 0.03 i stedet for 0.12
+        rawVelocity = rawVelocity * 0.6 + (deltaY / dt) * 0.03 * 0.4;
+        rawVelocity = clamp(rawVelocity, -maxSpeed * 0.5, maxSpeed * 0.5);
 
         hasMoved = Math.abs(y - touchStartY) > 6;
         lastTouchY = y;
@@ -125,16 +122,12 @@
         requestAnimationFrame(animate);
 
         if (isTouching && hasMoved) {
-          // Følg fingeren – men acceleration begrænser hvor hurtigt vi når råhastigheden
           velocity += (rawVelocity - velocity) * acceleration;
         } else {
-          // Fade tilbage til default
           velocity += (defaultSpeed - velocity) * 0.035;
         }
 
-        // Hård begrænsning – kan aldrig overstige maxSpeed
         velocity = clamp(velocity, -maxSpeed, maxSpeed);
-
         currentRotation += velocity;
         karrusel.rotation.y = currentRotation;
       }
