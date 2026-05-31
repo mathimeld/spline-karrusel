@@ -47,7 +47,9 @@
 
       const karrusel = app.findObjectByName('Group 2');
       const defaultSpeed = 0.0016;
-      let velocity = defaultSpeed;       // Den aktuelle hastighed
+      const maxSpeed = 0.018;        // Absolut max – kan ikke komme hurtigere end dette
+      const acceleration = 0.15;    // Hvor hurtigt den bygger fart op (lavere = blødere opstart)
+      let velocity = defaultSpeed;
       let currentRotation = karrusel.rotation.y;
       let isTouching = false;
 
@@ -55,7 +57,11 @@
       let touchStartY = null;
       let hasMoved = false;
       let lastTimestamp = null;
-      let rawVelocity = 0;               // Rå finger-hastighed
+      let rawVelocity = 0;
+
+      function clamp(val, min, max) {
+        return Math.max(min, Math.min(max, val));
+      }
 
       function dispatchTouchToCanvas(type, x, y) {
         const touch = new Touch({
@@ -92,10 +98,14 @@
         const dt = Math.max(now - lastTimestamp, 1);
         const deltaY = y - lastTouchY;
 
-        // Glidende gennemsnit af finger-hastighed – jævner uregelmæssige touch-samples ud
-        rawVelocity = rawVelocity * 0.6 + (deltaY / dt) * 0.4;
-        hasMoved = Math.abs(y - touchStartY) > 6;
+        // Glidende gennemsnit – jævner uregelmæssige touch-samples ud
+        // * 0.06 i stedet for 0.12 = halvt så sensitiv per pixel
+        rawVelocity = rawVelocity * 0.6 + (deltaY / dt) * 0.06 * 0.4;
 
+        // Clamp råhastighed så et enkelt hurtigt swipe ikke sender den i mål med det samme
+        rawVelocity = clamp(rawVelocity, -maxSpeed * 0.4, maxSpeed * 0.4);
+
+        hasMoved = Math.abs(y - touchStartY) > 6;
         lastTouchY = y;
         lastTimestamp = now;
       }, { passive: false });
@@ -115,12 +125,15 @@
         requestAnimationFrame(animate);
 
         if (isTouching && hasMoved) {
-          // Finger på skærmen – følg fingeren direkte
-          velocity += (rawVelocity * 0.12 - velocity) * 0.4;
+          // Følg fingeren – men acceleration begrænser hvor hurtigt vi når råhastigheden
+          velocity += (rawVelocity - velocity) * acceleration;
         } else {
-          // Finger løftet – fade tilbage til default
+          // Fade tilbage til default
           velocity += (defaultSpeed - velocity) * 0.035;
         }
+
+        // Hård begrænsning – kan aldrig overstige maxSpeed
+        velocity = clamp(velocity, -maxSpeed, maxSpeed);
 
         currentRotation += velocity;
         karrusel.rotation.y = currentRotation;
