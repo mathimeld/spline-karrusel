@@ -46,82 +46,137 @@
       });
 
       const karrusel = app.findObjectByName('Group 2');
-      const defaultSpeed = 0.0016;
-      let rotationSpeed = defaultSpeed;
-      let currentRotation = karrusel.rotation.y;
-      let isTouching = false;
 
-      let lastTouchY = null;
-      let touchStartY = null;
-      let touchStartScreenY = null;
-      let hasMoved = false;
-      let lastTimestamp = null;
-      let rawVelocity = 0;
+      // Viewport: iPhone 14 & 15 Pro = 393 x 852px
+      // Karussellen fylder skærmhøjden. Vi estimerer radius til halvdelen.
+      // hitRadius = hvor mange radianer et projekt "fylder" på cirklen.
+      // Med ~4-5 projekter synlige ad gangen og 2π fordelt på 11 projekter
+      // giver ~0.57 rad per projekt — vi bruger 0.22 som hit-zone (lidt under halvdelen)
+      // så der er et tydeligt mellemrum / dead zone mellem projekterne.
+      const HIT_RADIUS = 0.22; // radianer — juster op/ned efter test
 
       const projekter = [
-        { navn: 'SAA new',      url: 'https://livandmathias.com/becomeanaddict',     deg: 2 },
-        { navn: 'FL01',         url: 'https://livandmathias.com/flatlist',           deg: -57 },
-        { navn: 'Pære',         url: 'https://livandmathias.com/paeren',             deg: 34 },
-        { navn: 'XBOX',         url: 'https://livandmathias.com/everyscreen',        deg: 90 },
-        { navn: 'Livpic',       url: 'https://livandmathias.com/about',              deg: 67 },
-        { navn: 'Trusser',      url: 'https://livandmathias.com/dischargetag',       deg: 19 },
-        { navn: 'FL02',         url: 'https://livandmathias.com/flatlist',           deg: -12 },
-        { navn: 'FL03',         url: 'https://livandmathias.com/flatlist',           deg: -40 },
-        { navn: 'Mathiasny',    url: 'https://livandmathias.com/about',              deg: -81 },
-        { navn: 'Klovn',        url: 'https://livandmathias.com/enpausefraalvoren',  deg: -31 },
-        { navn: 'Duo til port', url: 'https://livandmathias.com/lovelingo',          deg: -64 },
+        { navn: 'SAA new',      url: 'https://livandmathias.com/becomeanaddict',    deg: 2   },
+        { navn: 'FL01',         url: 'https://livandmathias.com/flatlist',          deg: -57 },
+        { navn: 'Pære',         url: 'https://livandmathias.com/paeren',            deg: 34  },
+        { navn: 'XBOX',         url: 'https://livandmathias.com/everyscreen',       deg: 90  },
+        { navn: 'Livpic',       url: 'https://livandmathias.com/about',             deg: 67  },
+        { navn: 'Trusser',      url: 'https://livandmathias.com/dischargetag',      deg: 19  },
+        { navn: 'FL02',         url: 'https://livandmathias.com/flatlist',          deg: -12 },
+        { navn: 'FL03',         url: 'https://livandmathias.com/flatlist',          deg: -40 },
+        { navn: 'Mathiasny',    url: 'https://livandmathias.com/about',             deg: -81 },
+        { navn: 'Klovn',        url: 'https://livandmathias.com/enpausefraalvoren', deg: -31 },
+        { navn: 'Hvordanvild',  url: 'https://livandmathias.com/hvordanvilduhuskes',deg: -64 },
       ].map(p => ({ ...p, rad: p.deg * (Math.PI / 180) }));
 
-      // Sorter projekter efter vinkel så vi kan finde naboer
-      const sorteret = [...projekter].sort((a, b) => a.rad - b.rad);
+      // --- Rotation state ---
+      let currentRotation = karrusel.rotation.y;
+      let velocity = 0;
+      const friction      = 0.92;
+      const snapStrength  = 0.08;
+      const snapThreshold = 0.004;
+      const defaultDrift  = 0.0016;  // Auto-rotation — altid aktiv
+      let isSnapping  = false;
+      let snapTarget  = null;
 
-      function getNaermeste(rotation, offset = 0) {
-        let norm = rotation % (Math.PI * 2);
-        if (norm > Math.PI) norm -= Math.PI * 2;
-        if (norm < -Math.PI) norm += Math.PI * 2;
+      // --- Touch state ---
+      let isTouching   = false;
+      let lastTouchY   = null;
+      let touchStartY  = null;
+      let hasMoved     = false;
+      let lastTimestamp = null;
 
-        // Find index på nærmeste projekt
+      // --- Hjælpefunktioner ---
+      function normAngle(a) {
+        a = a % (Math.PI * 2);
+        if (a > Math.PI)  a -= Math.PI * 2;
+        if (a < -Math.PI) a += Math.PI * 2;
+        return a;
+      }
+
+      function angleDiff(a, b) {
+        return normAngle(a - b);
+      }
+
+      // Er projektet på forsiden? cos > 0 = forside, cos < 0 = bagside
+      function erPaaForside(projektRad) {
+        const relativ = normAngle(projektRad - normAngle(currentRotation));
+        return Math.cos(relativ) > 0;
+      }
+
+      // Find nærmeste FORSIDE-projekt til en given rotation (bruges til snap)
+      function getNaermeste(rotation) {
+        const norm = normAngle(rotation);
         let mindsteAfstand = Infinity;
-        let naermestIndex = 0;
-
-        for (let i = 0; i < sorteret.length; i++) {
-          let diff = norm - sorteret[i].rad;
-          while (diff > Math.PI) diff -= Math.PI * 2;
-          while (diff < -Math.PI) diff += Math.PI * 2;
-          const afstand = Math.abs(diff);
+        let naermest = null;
+        for (const p of projekter) {
+          if (!erPaaForside(p.rad)) continue;
+          const afstand = Math.abs(angleDiff(norm, p.rad));
           if (afstand < mindsteAfstand) {
             mindsteAfstand = afstand;
-            naermestIndex = i;
+            naermest = p;
+          }
+        }
+        // Fallback hvis ingen forside-projekter (bør ikke ske)
+        return naermest || projekter[0];
+      }
+
+      // Find projekt baseret på tap-Y.
+      // Mapper tap-Y til en vinkel på cirklen og finder det forside-projekt
+      // hvis vinkel er inden for HIT_RADIUS — ellers ingen navigation (dead zone).
+      function getProjektFraTapY(tapY) {
+        const screenH = window.innerHeight;
+        // Normaliser til [-1, 1]
+        const normY = (tapY / screenH) * 2 - 1;
+        const clamped = Math.max(-1, Math.min(1, normY));
+        // Vinkel på cirklen der svarer til dette Y-punkt
+        const tapAngle = Math.asin(clamped);
+
+        let bedsteAfstand = Infinity;
+        let bedsteProjekt = null;
+
+        for (const p of projekter) {
+          // Spring bagside-projekter over
+          if (!erPaaForside(p.rad)) continue;
+
+          // Projektets effektive vinkel relativt til currentRotation
+          const relativ = normAngle(p.rad - normAngle(currentRotation));
+          const afstand = Math.abs(angleDiff(relativ, tapAngle));
+
+          if (afstand < HIT_RADIUS && afstand < bedsteAfstand) {
+            bedsteAfstand = afstand;
+            bedsteProjekt = p;
           }
         }
 
-        // Offset: -1 = én foran, 0 = midten, +1 = én bagved
-        const index = (naermestIndex + offset + sorteret.length) % sorteret.length;
-        return sorteret[index];
+        return bedsteProjekt; // null = dead zone, ingen navigation
       }
 
+      // --- Touch events ---
       touchLayer.addEventListener('touchstart', (e) => {
         e.preventDefault();
-        isTouching = true;
-        lastTouchY = e.touches[0].clientY;
+        isTouching  = true;
+        isSnapping  = false;
+        lastTouchY  = e.touches[0].clientY;
         touchStartY = e.touches[0].clientY;
-        touchStartScreenY = e.touches[0].clientY;
         lastTimestamp = Date.now();
-        rawVelocity = 0;
-        hasMoved = false;
+        velocity    = 0;
+        hasMoved    = false;
       }, { passive: false });
 
       touchLayer.addEventListener('touchmove', (e) => {
         e.preventDefault();
-        const y = e.touches[0].clientY;
+        const y   = e.touches[0].clientY;
         const now = Date.now();
-        const dt = Math.max(now - lastTimestamp, 1);
+        const dt  = Math.max(now - lastTimestamp, 1);
         const deltaY = y - lastTouchY;
 
-        rawVelocity = rawVelocity * 0.6 + (deltaY / dt) * 0.08 * 0.4;
-        hasMoved = Math.abs(y - touchStartY) > 6;
+        velocity = (deltaY / dt) * 0.3;
+        currentRotation += velocity;
+        karrusel.rotation.y = currentRotation;
 
-        lastTouchY = y;
+        hasMoved = Math.abs(y - touchStartY) > 8;
+        lastTouchY    = y;
         lastTimestamp = now;
       }, { passive: false });
 
@@ -130,34 +185,49 @@
         isTouching = false;
 
         if (!hasMoved) {
-          const screenHeight = window.innerHeight;
-          const tapY = touchStartScreenY;
-          const tredjedel = screenHeight / 3;
-
-          let offset = 0;
-          if (tapY < tredjedel) {
-            offset = -1; // Øverste zone → projekt foran
-          } else if (tapY > tredjedel * 2) {
-            offset = 1;  // Nederste zone → projekt bagved
-          }
-
-          const projekt = getNaermeste(currentRotation, offset);
+          const tapY = e.changedTouches[0].clientY;
+          const projekt = getProjektFraTapY(tapY);
           if (projekt) {
             window.top.location.href = projekt.url;
           }
+          // Ingen projekt fundet = dead zone, gør ingenting
+          return;
         }
+
+        // Swipe sluppet — lad momentum og snap tage over
+        isSnapping = false;
       }, { passive: false });
 
+      // --- Animation loop ---
       function animate() {
         requestAnimationFrame(animate);
 
-        if (isTouching && hasMoved) {
-          rotationSpeed += (rawVelocity * 0.12 - rotationSpeed) * 0.4;
+        if (isTouching) return;
+
+        if (isSnapping && snapTarget !== null) {
+          const diff = angleDiff(snapTarget.rad, normAngle(currentRotation));
+          currentRotation += diff * snapStrength;
+          if (Math.abs(diff) < 0.001) {
+            currentRotation = currentRotation - normAngle(currentRotation) + snapTarget.rad;
+            isSnapping  = false;
+            snapTarget  = null;
+            velocity    = 0;
+          }
+        } else if (Math.abs(velocity) > snapThreshold) {
+          // Momentum
+          velocity *= friction;
+          currentRotation += velocity;
+        } else if (Math.abs(velocity) > 0.0001) {
+          // Velocity lav nok — snap til nærmeste forside-projekt
+          snapTarget = getNaermeste(currentRotation);
+          isSnapping = true;
+          velocity   = 0;
         } else {
-          rotationSpeed += (defaultSpeed - rotationSpeed) * 0.035;
+          // Ingen swipe aktiv — auto-drift
+          velocity = 0;
+          currentRotation += defaultDrift;
         }
 
-        currentRotation += rotationSpeed;
         karrusel.rotation.y = currentRotation;
       }
 
