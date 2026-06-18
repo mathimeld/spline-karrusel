@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Liv & Mathias Mobile Carousel</title>
+
+  <style>
+    :root {
+      --card-width: min(74vw, 340px);
+      --card-ratio: 4 / 5;
+      --card-gap: 165px;
+      --bg: transparent;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      overscroll-behavior: none;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    body {
+      position: fixed;
+      inset: 0;
+    }
+
+    .lm-carousel {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      perspective: 900px;
+      background: transparent;
+    }
+
+    .lm-stack {
+      position: absolute;
+      inset: 0;
+      transform-style: preserve-3d;
+    }
+
+    .lm-card {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: var(--card-width);
+      aspect-ratio: var(--card-ratio);
+      display: block;
+      overflow: hidden;
+      background: #e9e9e9;
+      text-decoration: none;
+      color: inherit;
+      cursor: pointer;
+      transform-origin: center center;
+      will-change: transform, opacity, filter;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.16);
+    }
+
+    .lm-card img,
+    .lm-card video {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      pointer-events: none;
+      background: #e9e9e9;
+    }
+
+    .lm-card video {
+      object-position: center center;
+    }
+
+    .lm-card-title {
+      position: absolute;
+      left: 12px;
+      bottom: 10px;
+      z-index: 2;
+      max-width: calc(100% - 24px);
+      padding: 6px 8px;
+      background: rgba(255, 255, 255, 0.82);
+      color: #111;
+      font-size: 12px;
+      line-height: 1;
+      letter-spacing: -0.01em;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 160ms ease;
+    }
+
+    /*
+      Turn this on while testing if you want labels visible:
+      .lm-card-title { opacity: 1; }
+    */
+
+    .lm-placeholder {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      text-align: center;
+      font-size: 15px;
+      line-height: 1.15;
+      color: #111;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.55), rgba(255,255,255,0)),
+        #d9d9d9;
+      pointer-events: none;
+    }
+
+    @media (max-width: 430px) {
+      :root {
+        --card-width: min(76vw, 330px);
+        --card-gap: 155px;
+      }
+    }
+
+    @media (max-height: 740px) {
+      :root {
+        --card-width: min(68vw, 300px);
+        --card-gap: 138px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="lm-carousel" id="lmCarousel" aria-label="Portfolio projects">
+    <div class="lm-stack" id="lmStack"></div>
+  </main>
+
+  <script>
+    /*
+      HOW TO USE:
+      1. Replace the src/poster paths with your real GitHub asset paths.
+      2. Use type: "image" for jpg/png/webp.
+      3. Use type: "video" for mp4/webm.
+      4. Keep target: "_top" so links open the full Readymag page, not inside the iframe.
+    */
+
+    const projects = [
+      {
+        title: "SAA new",
+        href: "https://livandmathias.com/becomeanaddict",
+        type: "image",
+        src: "assets/saa-new.jpg"
+      },
+      {
+        title: "FL01",
+        href: "https://livandmathias.com/flatlist",
+        type: "image",
+        src: "assets/fl01.jpg"
+      },
+      {
+        title: "Pære",
+        href: "https://livandmathias.com/paeren",
+        type: "image",
+        src: "assets/paere.jpg"
+      },
+      {
+        title: "XBOX",
+        href: "https://livandmathias.com/everyscreen",
+        type: "video",
+        src: "assets/xbox.mp4",
+        poster: "assets/xbox-poster.jpg"
+      },
+      {
+        title: "Livpic",
+        href: "https://livandmathias.com/about",
+        type: "image",
+        src: "assets/livpic.jpg"
+      },
+      {
+        title: "Trusser",
+        href: "https://livandmathias.com/dischargetag",
+        type: "image",
+        src: "assets/trusser.jpg"
+      },
+      {
+        title: "FL02",
+        href: "https://livandmathias.com/flatlist",
+        type: "image",
+        src: "assets/fl02.jpg"
+      },
+      {
+        title: "FL03",
+        href: "https://livandmathias.com/flatlist",
+        type: "image",
+        src: "assets/fl03.jpg"
+      },
+      {
+        title: "Mathiasny",
+        href: "https://livandmathias.com/about",
+        type: "image",
+        src: "assets/mathiasny.jpg"
+      },
+      {
+        title: "Klovn",
+        href: "https://livandmathias.com/enpausefraalvoren",
+        type: "image",
+        src: "assets/klovn.jpg"
+      },
+      {
+        title: "Hvordan vil du huskes",
+        href: "https://livandmathias.com/hvordanvilduhuskes",
+        type: "video",
+        src: "assets/hvordanvilduhuskes.mp4",
+        poster: "assets/hvordanvilduhuskes-poster.jpg"
+      }
+    ];
+
+    const carousel = document.getElementById("lmCarousel");
+    const stack = document.getElementById("lmStack");
+
+    const settings = {
+      // Lower number = slower automatic rotation.
+      autoSpeed: 0.000085,
+
+      // Higher number = finger must move more to move one project.
+      dragPixelsPerProject: 145,
+
+      // Higher number = more momentum after swipe.
+      momentumMultiplier: 1.08,
+
+      // Lower number = momentum dies faster.
+      frictionPerFrame: 0.955,
+
+      // Visual spacing/depth.
+      maxVisibleDistance: 5,
+      rotationTilt: 4.5,
+      minScale: 0.48,
+      blurAmount: 1.15
+    };
+
+    let cards = [];
+    let offset = 0;
+    let velocity = 0;
+    let isDragging = false;
+
+    let pointerStartY = 0;
+    let lastPointerY = 0;
+    let lastPointerTime = 0;
+    let movedDuringGesture = false;
+    let suppressNextClick = false;
+
+    function shortestPosition(index, currentOffset, total) {
+      let position = index - currentOffset;
+      position = ((position + total / 2) % total + total) % total - total / 2;
+      return position;
+    }
+
+    function makeCard(project) {
+      const card = document.createElement("a");
+      card.className = "lm-card";
+      card.href = project.href;
+      card.target = "_top";
+      card.rel = "noopener";
+      card.setAttribute("aria-label", project.title);
+
+      let media;
+
+      if (project.type === "video") {
+        media = document.createElement("video");
+        media.src = project.src;
+        if (project.poster) media.poster = project.poster;
+        media.autoplay = true;
+        media.muted = true;
+        media.defaultMuted = true;
+        media.loop = true;
+        media.playsInline = true;
+        media.preload = "metadata";
+        media.setAttribute("muted", "");
+        media.setAttribute("playsinline", "");
+        media.setAttribute("webkit-playsinline", "");
+      } else {
+        media = document.createElement("img");
+        media.src = project.src;
+        media.alt = project.title;
+        media.loading = "eager";
+        media.decoding = "async";
+      }
+
+      media.addEventListener("error", () => {
+        if (!card.querySelector(".lm-placeholder")) {
+          const fallback = document.createElement("div");
+          fallback.className = "lm-placeholder";
+          fallback.textContent = project.title + " — add media file";
+          card.appendChild(fallback);
+        }
+      });
+
+      const label = document.createElement("span");
+      label.className = "lm-card-title";
+      label.textContent = project.title;
+
+      card.appendChild(media);
+      card.appendChild(label);
+
+      return card;
+    }
+
+    function buildCarousel() {
+      cards = projects.map((project) => {
+        const card = makeCard(project);
+        stack.appendChild(card);
+        return card;
+      });
+    }
+
+    function playRelevantVideos() {
+      cards.forEach((card, index) => {
+        const video = card.querySelector("video");
+        if (!video) return;
+
+        const distance = Math.abs(shortestPosition(index, offset, cards.length));
+
+        if (distance < 2.8) {
+          if (video.paused) {
+            video.play().catch(() => {});
+          }
+        } else {
+          if (!video.paused) video.pause();
+        }
+      });
+    }
+
+    function unlockVideos() {
+      cards.forEach((card) => {
+        const video = card.querySelector("video");
+        if (video) video.play().catch(() => {});
+      });
+    }
+
+    function renderCards() {
+      const total = cards.length;
+      const cardGap = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--card-gap")) || 160;
+
+      cards.forEach((card, index) => {
+        const position = shortestPosition(index, offset, total);
+        const distance = Math.abs(position);
+        const clamped = Math.min(distance, settings.maxVisibleDistance);
+
+        const y = position * cardGap;
+        const scale = Math.max(settings.minScale, 1 - clamped * 0.105);
+        const opacity = Math.max(0, 1 - clamped * 0.18);
+        const blur = Math.min(settings.blurAmount * clamped, 4);
+        const z = Math.round(1000 - clamped * 100);
+        const rotateX = position * -settings.rotationTilt;
+        const translateZ = -clamped * 45;
+
+        card.style.transform =
+          `translate3d(-50%, calc(-50% + ${y}px), ${translateZ}px) rotateX(${rotateX}deg) scale(${scale})`;
+
+        card.style.opacity = opacity;
+        card.style.filter = `blur(${blur}px)`;
+        card.style.zIndex = z;
+        card.style.pointerEvents = distance < 1.35 ? "auto" : "auto";
+      });
+
+      playRelevantVideos();
+    }
+
+    function animate(timestamp) {
+      if (!animate.lastTime) animate.lastTime = timestamp;
+      const delta = Math.min(timestamp - animate.lastTime, 34);
+      animate.lastTime = timestamp;
+
+      if (!isDragging) {
+        offset += settings.autoSpeed * delta;
+        offset += velocity * delta;
+
+        velocity *= Math.pow(settings.frictionPerFrame, delta / 16.67);
+        if (Math.abs(velocity) < 0.000003) velocity = 0;
+      }
+
+      renderCards();
+      requestAnimationFrame(animate);
+    }
+
+    carousel.addEventListener("pointerdown", (event) => {
+      isDragging = true;
+      movedDuringGesture = false;
+      velocity = 0;
+
+      pointerStartY = event.clientY;
+      lastPointerY = event.clientY;
+      lastPointerTime = performance.now();
+
+      unlockVideos();
+
+      carousel.setPointerCapture?.(event.pointerId);
+    });
+
+    carousel.addEventListener("pointermove", (event) => {
+      if (!isDragging) return;
+
+      const now = performance.now();
+      const deltaY = event.clientY - lastPointerY;
+      const deltaTime = Math.max(now - lastPointerTime, 1);
+
+      if (Math.abs(event.clientY - pointerStartY) > 7) {
+        movedDuringGesture = true;
+      }
+
+      const projectDelta = deltaY / settings.dragPixelsPerProject;
+
+      // Negative makes finger-down move the stack down in a natural-feeling way.
+      offset -= projectDelta;
+
+      velocity = -(projectDelta / deltaTime) * settings.momentumMultiplier;
+
+      lastPointerY = event.clientY;
+      lastPointerTime = now;
+    });
+
+    carousel.addEventListener("pointerup", (event) => {
+      isDragging = false;
+      carousel.releasePointerCapture?.(event.pointerId);
+
+      if (movedDuringGesture) {
+        suppressNextClick = true;
+        setTimeout(() => {
+          suppressNextClick = false;
+        }, 120);
+      }
+    });
+
+    carousel.addEventListener("pointercancel", () => {
+      isDragging = false;
+    });
+
+    carousel.addEventListener("click", (event) => {
+      if (suppressNextClick) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    }, true);
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        cards.forEach((card) => {
+          const video = card.querySelector("video");
+          if (video) video.pause();
+        });
+      } else {
+        playRelevantVideos();
+      }
+    });
+
+    buildCarousel();
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
