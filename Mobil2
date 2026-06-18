@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>Liv & Mathias Mobile Carousel</title>
+  <title>Liv & Mathias Carousel Test</title>
 
   <style>
     :root {
-      --card-width: min(74vw, 340px);
+      --card-width: min(76vw, 330px);
       --card-ratio: 4 / 5;
-      --card-gap: 165px;
+      --card-gap: 155px;
       --bg: transparent;
     }
 
@@ -73,7 +73,6 @@
       box-shadow: 0 14px 40px rgba(0, 0, 0, 0.16);
     }
 
-    .lm-card img,
     .lm-card video {
       width: 100%;
       height: 100%;
@@ -82,32 +81,6 @@
       pointer-events: none;
       background: #e9e9e9;
     }
-
-    .lm-card video {
-      object-position: center center;
-    }
-
-    .lm-card-title {
-      position: absolute;
-      left: 12px;
-      bottom: 10px;
-      z-index: 2;
-      max-width: calc(100% - 24px);
-      padding: 6px 8px;
-      background: rgba(255, 255, 255, 0.82);
-      color: #111;
-      font-size: 12px;
-      line-height: 1;
-      letter-spacing: -0.01em;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 160ms ease;
-    }
-
-    /*
-      Turn this on while testing if you want labels visible:
-      .lm-card-title { opacity: 1; }
-    */
 
     .lm-placeholder {
       position: absolute;
@@ -119,17 +92,8 @@
       font-size: 15px;
       line-height: 1.15;
       color: #111;
-      background:
-        linear-gradient(135deg, rgba(255,255,255,0.55), rgba(255,255,255,0)),
-        #d9d9d9;
+      background: #d9d9d9;
       pointer-events: none;
-    }
-
-    @media (max-width: 430px) {
-      :root {
-        --card-width: min(76vw, 330px);
-        --card-gap: 155px;
-      }
     }
 
     @media (max-height: 740px) {
@@ -147,82 +111,24 @@
   </main>
 
   <script>
-    /*
-      HOW TO USE:
-      1. Replace the src/poster paths with your real GitHub asset paths.
-      2. Use type: "image" for jpg/png/webp.
-      3. Use type: "video" for mp4/webm.
-      4. Keep target: "_top" so links open the full Readymag page, not inside the iframe.
-    */
-
     const projects = [
       {
-        title: "SAA new",
-        href: "https://livandmathias.com/becomeanaddict",
-        type: "image",
-        src: "assets/saa-new.jpg"
-      },
-      {
-        title: "FL01",
-        href: "https://livandmathias.com/flatlist",
-        type: "image",
-        src: "assets/fl01.jpg"
-      },
-      {
-        title: "Pære",
-        href: "https://livandmathias.com/paeren",
-        type: "image",
-        src: "assets/paere.jpg"
-      },
-      {
-        title: "XBOX",
-        href: "https://livandmathias.com/everyscreen",
-        type: "video",
-        src: "assets/xbox.mp4",
-        poster: "assets/xbox-poster.jpg"
-      },
-      {
-        title: "Livpic",
-        href: "https://livandmathias.com/about",
-        type: "image",
-        src: "assets/livpic.jpg"
-      },
-      {
-        title: "Trusser",
-        href: "https://livandmathias.com/dischargetag",
-        type: "image",
-        src: "assets/trusser.jpg"
-      },
-      {
-        title: "FL02",
-        href: "https://livandmathias.com/flatlist",
-        type: "image",
-        src: "assets/fl02.jpg"
-      },
-      {
-        title: "FL03",
-        href: "https://livandmathias.com/flatlist",
-        type: "image",
-        src: "assets/fl03.jpg"
-      },
-      {
-        title: "Mathiasny",
-        href: "https://livandmathias.com/about",
-        type: "image",
-        src: "assets/mathiasny.jpg"
-      },
-      {
-        title: "Klovn",
-        href: "https://livandmathias.com/enpausefraalvoren",
-        type: "image",
-        src: "assets/klovn.jpg"
-      },
-      {
-        title: "Hvordan vil du huskes",
+        title: "Hvordan vil du huskes 01",
         href: "https://livandmathias.com/hvordanvilduhuskes",
         type: "video",
-        src: "assets/hvordanvilduhuskes.mp4",
-        poster: "assets/hvordanvilduhuskes-poster.jpg"
+        src: "assets/hvordanvilduhuskes.mp4"
+      },
+      {
+        title: "Hvordan vil du huskes 02",
+        href: "https://livandmathias.com/hvordanvilduhuskes",
+        type: "video",
+        src: "assets/hvordanvilduhuskes.mp4"
+      },
+      {
+        title: "Hvordan vil du huskes 03",
+        href: "https://livandmathias.com/hvordanvilduhuskes",
+        type: "video",
+        src: "assets/hvordanvilduhuskes.mp4"
       }
     ];
 
@@ -230,19 +136,10 @@
     const stack = document.getElementById("lmStack");
 
     const settings = {
-      // Lower number = slower automatic rotation.
       autoSpeed: 0.000085,
-
-      // Higher number = finger must move more to move one project.
       dragPixelsPerProject: 145,
-
-      // Higher number = more momentum after swipe.
       momentumMultiplier: 1.08,
-
-      // Lower number = momentum dies faster.
       frictionPerFrame: 0.955,
-
-      // Visual spacing/depth.
       maxVisibleDistance: 5,
       rotationTilt: 4.5,
       minScale: 0.48,
@@ -274,45 +171,27 @@
       card.rel = "noopener";
       card.setAttribute("aria-label", project.title);
 
-      let media;
+      const video = document.createElement("video");
+      video.src = project.src;
+      video.autoplay = true;
+      video.muted = true;
+      video.defaultMuted = true;
+      video.loop = true;
+      video.playsInline = true;
+      video.preload = "metadata";
 
-      if (project.type === "video") {
-        media = document.createElement("video");
-        media.src = project.src;
-        if (project.poster) media.poster = project.poster;
-        media.autoplay = true;
-        media.muted = true;
-        media.defaultMuted = true;
-        media.loop = true;
-        media.playsInline = true;
-        media.preload = "metadata";
-        media.setAttribute("muted", "");
-        media.setAttribute("playsinline", "");
-        media.setAttribute("webkit-playsinline", "");
-      } else {
-        media = document.createElement("img");
-        media.src = project.src;
-        media.alt = project.title;
-        media.loading = "eager";
-        media.decoding = "async";
-      }
+      video.setAttribute("muted", "");
+      video.setAttribute("playsinline", "");
+      video.setAttribute("webkit-playsinline", "");
 
-      media.addEventListener("error", () => {
-        if (!card.querySelector(".lm-placeholder")) {
-          const fallback = document.createElement("div");
-          fallback.className = "lm-placeholder";
-          fallback.textContent = project.title + " — add media file";
-          card.appendChild(fallback);
-        }
+      video.addEventListener("error", () => {
+        const fallback = document.createElement("div");
+        fallback.className = "lm-placeholder";
+        fallback.textContent = project.title + " — video not found";
+        card.appendChild(fallback);
       });
 
-      const label = document.createElement("span");
-      label.className = "lm-card-title";
-      label.textContent = project.title;
-
-      card.appendChild(media);
-      card.appendChild(label);
-
+      card.appendChild(video);
       return card;
     }
 
@@ -350,7 +229,8 @@
 
     function renderCards() {
       const total = cards.length;
-      const cardGap = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--card-gap")) || 160;
+      const cardGap =
+        parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--card-gap")) || 155;
 
       cards.forEach((card, index) => {
         const position = shortestPosition(index, offset, total);
@@ -371,7 +251,6 @@
         card.style.opacity = opacity;
         card.style.filter = `blur(${blur}px)`;
         card.style.zIndex = z;
-        card.style.pointerEvents = distance < 1.35 ? "auto" : "auto";
       });
 
       playRelevantVideos();
@@ -421,9 +300,7 @@
 
       const projectDelta = deltaY / settings.dragPixelsPerProject;
 
-      // Negative makes finger-down move the stack down in a natural-feeling way.
       offset -= projectDelta;
-
       velocity = -(projectDelta / deltaTime) * settings.momentumMultiplier;
 
       lastPointerY = event.clientY;
