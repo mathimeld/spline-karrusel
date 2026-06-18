@@ -3,14 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>Liv & Mathias Carousel Test</title>
+  <title>Liv & Mathias Circular Carousel</title>
 
   <style>
     :root {
-      --card-width: min(76vw, 330px);
-      --card-ratio: 4 / 5;
-      --card-gap: 155px;
       --bg: transparent;
+
+      /* Main card size */
+      --card-width: min(78vw, 360px);
+      --card-ratio: 16 / 9;
+
+      /* Carousel shape */
+      --radius-x: min(64vw, 310px);
+      --radius-z: 360px;
     }
 
     * {
@@ -35,26 +40,21 @@
       inset: 0;
     }
 
-    .lm-carousel {
+    .carousel {
       position: fixed;
       inset: 0;
       width: 100%;
       height: 100%;
       overflow: hidden;
+      background: transparent;
+      perspective: 950px;
+      perspective-origin: center center;
       touch-action: none;
       user-select: none;
       -webkit-user-select: none;
-      perspective: 900px;
-      background: transparent;
     }
 
-    .lm-stack {
-      position: absolute;
-      inset: 0;
-      transform-style: preserve-3d;
-    }
-
-    .lm-card {
+    .card {
       position: absolute;
       left: 50%;
       top: 50%;
@@ -62,53 +62,61 @@
       aspect-ratio: var(--card-ratio);
       display: block;
       overflow: hidden;
-      background: #e9e9e9;
+      background: #e8e8e8;
       text-decoration: none;
       color: inherit;
-      cursor: pointer;
+      transform-style: preserve-3d;
       transform-origin: center center;
       will-change: transform, opacity, filter;
       backface-visibility: hidden;
       -webkit-backface-visibility: hidden;
-      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.16);
+      cursor: pointer;
     }
 
-    .lm-card video {
+    .card video,
+    .card img {
       width: 100%;
       height: 100%;
       display: block;
       object-fit: cover;
       pointer-events: none;
-      background: #e9e9e9;
+      background: #e8e8e8;
     }
 
-    .lm-placeholder {
+    .placeholder {
       position: absolute;
       inset: 0;
       display: grid;
       place-items: center;
       padding: 20px;
       text-align: center;
-      font-size: 15px;
+      font-size: 14px;
       line-height: 1.15;
       color: #111;
       background: #d9d9d9;
       pointer-events: none;
     }
 
+    @media (max-width: 430px) {
+      :root {
+        --card-width: 82vw;
+        --radius-x: 67vw;
+        --radius-z: 330px;
+      }
+    }
+
     @media (max-height: 740px) {
       :root {
-        --card-width: min(68vw, 300px);
-        --card-gap: 138px;
+        --card-width: 74vw;
+        --radius-x: 60vw;
+        --radius-z: 300px;
       }
     }
   </style>
 </head>
 
 <body>
-  <main class="lm-carousel" id="lmCarousel" aria-label="Portfolio projects">
-    <div class="lm-stack" id="lmStack"></div>
-  </main>
+  <main class="carousel" id="carousel" aria-label="Portfolio projects"></main>
 
   <script>
     const projects = [
@@ -132,75 +140,97 @@
       }
     ];
 
-    const carousel = document.getElementById("lmCarousel");
-    const stack = document.getElementById("lmStack");
+    const carousel = document.getElementById("carousel");
 
     const settings = {
-      autoSpeed: 0.000085,
-      dragPixelsPerProject: 145,
-      momentumMultiplier: 1.08,
-      frictionPerFrame: 0.955,
-      maxVisibleDistance: 5,
-      rotationTilt: 4.5,
-      minScale: 0.48,
-      blurAmount: 1.15
+      autoSpeed: 0.000075,
+      dragPixelsPerStep: 190,
+      momentumMultiplier: 0.95,
+      friction: 0.945,
+
+      /* Look */
+      sideOpacity: 0.42,
+      backOpacity: 0.12,
+      sideScale: 0.76,
+      backScale: 0.55,
+      maxSideAngle: 63,
+      blurAmount: 0.25
     };
 
     let cards = [];
     let offset = 0;
     let velocity = 0;
+
     let isDragging = false;
+    let startX = 0;
+    let lastX = 0;
+    let lastTime = 0;
+    let moved = false;
+    let suppressClick = false;
 
-    let pointerStartY = 0;
-    let lastPointerY = 0;
-    let lastPointerTime = 0;
-    let movedDuringGesture = false;
-    let suppressNextClick = false;
-
-    function shortestPosition(index, currentOffset, total) {
-      let position = index - currentOffset;
-      position = ((position + total / 2) % total + total) % total - total / 2;
-      return position;
+    function getCSSNumber(name) {
+      return parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue(name)
+      );
     }
 
-    function makeCard(project) {
+    function createCard(project) {
       const card = document.createElement("a");
-      card.className = "lm-card";
+      card.className = "card";
       card.href = project.href;
       card.target = "_top";
       card.rel = "noopener";
       card.setAttribute("aria-label", project.title);
 
-      const video = document.createElement("video");
-      video.src = project.src;
-      video.autoplay = true;
-      video.muted = true;
-      video.defaultMuted = true;
-      video.loop = true;
-      video.playsInline = true;
-      video.preload = "metadata";
+      if (project.type === "video") {
+        const video = document.createElement("video");
+        video.src = project.src;
+        video.autoplay = true;
+        video.muted = true;
+        video.defaultMuted = true;
+        video.loop = true;
+        video.playsInline = true;
+        video.preload = "metadata";
 
-      video.setAttribute("muted", "");
-      video.setAttribute("playsinline", "");
-      video.setAttribute("webkit-playsinline", "");
+        video.setAttribute("muted", "");
+        video.setAttribute("playsinline", "");
+        video.setAttribute("webkit-playsinline", "");
 
-      video.addEventListener("error", () => {
-        const fallback = document.createElement("div");
-        fallback.className = "lm-placeholder";
-        fallback.textContent = project.title + " — video not found";
-        card.appendChild(fallback);
-      });
+        video.addEventListener("error", () => {
+          const fallback = document.createElement("div");
+          fallback.className = "placeholder";
+          fallback.textContent = project.title + " — video not found";
+          card.appendChild(fallback);
+        });
 
-      card.appendChild(video);
+        card.appendChild(video);
+      } else {
+        const img = document.createElement("img");
+        img.src = project.src;
+        img.alt = project.title;
+
+        img.addEventListener("error", () => {
+          const fallback = document.createElement("div");
+          fallback.className = "placeholder";
+          fallback.textContent = project.title + " — image not found";
+          card.appendChild(fallback);
+        });
+
+        card.appendChild(img);
+      }
+
+      carousel.appendChild(card);
       return card;
     }
 
-    function buildCarousel() {
-      cards = projects.map((project) => {
-        const card = makeCard(project);
-        stack.appendChild(card);
-        return card;
-      });
+    function build() {
+      cards = projects.map(createCard);
+    }
+
+    function circularDistance(a) {
+      const total = cards.length;
+      let d = ((a + total / 2) % total + total) % total - total / 2;
+      return d;
     }
 
     function playRelevantVideos() {
@@ -208,14 +238,12 @@
         const video = card.querySelector("video");
         if (!video) return;
 
-        const distance = Math.abs(shortestPosition(index, offset, cards.length));
+        const distance = Math.abs(circularDistance(index - offset));
 
-        if (distance < 2.8) {
-          if (video.paused) {
-            video.play().catch(() => {});
-          }
+        if (distance < 1.7) {
+          video.play().catch(() => {});
         } else {
-          if (!video.paused) video.pause();
+          video.pause();
         }
       });
     }
@@ -227,60 +255,75 @@
       });
     }
 
-    function renderCards() {
+    function render() {
       const total = cards.length;
-      const cardGap =
-        parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--card-gap")) || 155;
+      const radiusX = getCSSNumber("--radius-x") || 280;
+      const radiusZ = getCSSNumber("--radius-z") || 330;
 
       cards.forEach((card, index) => {
-        const position = shortestPosition(index, offset, total);
-        const distance = Math.abs(position);
-        const clamped = Math.min(distance, settings.maxVisibleDistance);
+        const rawPosition = circularDistance(index - offset);
+        const angle = rawPosition * ((Math.PI * 2) / total);
 
-        const y = position * cardGap;
-        const scale = Math.max(settings.minScale, 1 - clamped * 0.105);
-        const opacity = Math.max(0, 1 - clamped * 0.18);
-        const blur = Math.min(settings.blurAmount * clamped, 4);
-        const z = Math.round(1000 - clamped * 100);
-        const rotateX = position * -settings.rotationTilt;
-        const translateZ = -clamped * 45;
+        const x = Math.sin(angle) * radiusX;
+        const z = Math.cos(angle) * radiusZ;
+
+        const frontness = (Math.cos(angle) + 1) / 2;
+        const distance = Math.abs(rawPosition);
+
+        const rotateY = -Math.sin(angle) * settings.maxSideAngle;
+        const scale =
+          settings.backScale +
+          (1 - settings.backScale) * Math.pow(frontness, 0.72);
+
+        const opacity =
+          settings.backOpacity +
+          (1 - settings.backOpacity) * Math.pow(frontness, 0.85);
+
+        const blur = (1 - frontness) * settings.blurAmount;
+        const zIndex = Math.round(frontness * 1000);
 
         card.style.transform =
-          `translate3d(-50%, calc(-50% + ${y}px), ${translateZ}px) rotateX(${rotateX}deg) scale(${scale})`;
+          `translate3d(calc(-50% + ${x}px), -50%, ${z - radiusZ}px) rotateY(${rotateY}deg) scale(${scale})`;
 
         card.style.opacity = opacity;
         card.style.filter = `blur(${blur}px)`;
-        card.style.zIndex = z;
+        card.style.zIndex = zIndex;
+
+        if (distance < 1.15) {
+          card.style.pointerEvents = "auto";
+        } else {
+          card.style.pointerEvents = "auto";
+        }
       });
 
       playRelevantVideos();
     }
 
-    function animate(timestamp) {
-      if (!animate.lastTime) animate.lastTime = timestamp;
-      const delta = Math.min(timestamp - animate.lastTime, 34);
-      animate.lastTime = timestamp;
+    function animate(time) {
+      if (!animate.last) animate.last = time;
+      const delta = Math.min(time - animate.last, 34);
+      animate.last = time;
 
       if (!isDragging) {
         offset += settings.autoSpeed * delta;
         offset += velocity * delta;
 
-        velocity *= Math.pow(settings.frictionPerFrame, delta / 16.67);
+        velocity *= Math.pow(settings.friction, delta / 16.67);
         if (Math.abs(velocity) < 0.000003) velocity = 0;
       }
 
-      renderCards();
+      render();
       requestAnimationFrame(animate);
     }
 
     carousel.addEventListener("pointerdown", (event) => {
       isDragging = true;
-      movedDuringGesture = false;
+      moved = false;
       velocity = 0;
 
-      pointerStartY = event.clientY;
-      lastPointerY = event.clientY;
-      lastPointerTime = performance.now();
+      startX = event.clientX;
+      lastX = event.clientX;
+      lastTime = performance.now();
 
       unlockVideos();
 
@@ -291,31 +334,31 @@
       if (!isDragging) return;
 
       const now = performance.now();
-      const deltaY = event.clientY - lastPointerY;
-      const deltaTime = Math.max(now - lastPointerTime, 1);
+      const deltaX = event.clientX - lastX;
+      const deltaTime = Math.max(now - lastTime, 1);
 
-      if (Math.abs(event.clientY - pointerStartY) > 7) {
-        movedDuringGesture = true;
+      if (Math.abs(event.clientX - startX) > 7) {
+        moved = true;
       }
 
-      const projectDelta = deltaY / settings.dragPixelsPerProject;
+      const stepDelta = deltaX / settings.dragPixelsPerStep;
 
-      offset -= projectDelta;
-      velocity = -(projectDelta / deltaTime) * settings.momentumMultiplier;
+      offset -= stepDelta;
+      velocity = -(stepDelta / deltaTime) * settings.momentumMultiplier;
 
-      lastPointerY = event.clientY;
-      lastPointerTime = now;
+      lastX = event.clientX;
+      lastTime = now;
     });
 
     carousel.addEventListener("pointerup", (event) => {
       isDragging = false;
       carousel.releasePointerCapture?.(event.pointerId);
 
-      if (movedDuringGesture) {
-        suppressNextClick = true;
+      if (moved) {
+        suppressClick = true;
         setTimeout(() => {
-          suppressNextClick = false;
-        }, 120);
+          suppressClick = false;
+        }, 130);
       }
     });
 
@@ -323,12 +366,16 @@
       isDragging = false;
     });
 
-    carousel.addEventListener("click", (event) => {
-      if (suppressNextClick) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-    }, true);
+    carousel.addEventListener(
+      "click",
+      (event) => {
+        if (suppressClick) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      },
+      true
+    );
 
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) {
@@ -341,7 +388,7 @@
       }
     });
 
-    buildCarousel();
+    build();
     requestAnimationFrame(animate);
   </script>
 </body>
