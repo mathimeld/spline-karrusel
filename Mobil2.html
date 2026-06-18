@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>Liv & Mathias Circular Carousel</title>
+  <title>Liv & Mathias Vertical Carousel</title>
 
   <style>
     :root {
       --bg: transparent;
 
-      /* Main card size */
-      --card-width: min(78vw, 360px);
+      /* Card size */
+      --card-width: min(82vw, 360px);
       --card-ratio: 16 / 9;
 
-      /* Carousel shape */
-      --radius-x: min(64vw, 310px);
+      /* Vertical carousel shape */
+      --radius-y: 255px;
       --radius-z: 360px;
     }
 
@@ -97,19 +97,11 @@
       pointer-events: none;
     }
 
-    @media (max-width: 430px) {
-      :root {
-        --card-width: 82vw;
-        --radius-x: 67vw;
-        --radius-z: 330px;
-      }
-    }
-
     @media (max-height: 740px) {
       :root {
-        --card-width: 74vw;
-        --radius-x: 60vw;
-        --radius-z: 300px;
+        --card-width: min(78vw, 320px);
+        --radius-y: 220px;
+        --radius-z: 320px;
       }
     }
   </style>
@@ -143,18 +135,16 @@
     const carousel = document.getElementById("carousel");
 
     const settings = {
-      autoSpeed: 0.000075,
-      dragPixelsPerStep: 190,
-      momentumMultiplier: 0.95,
-      friction: 0.945,
+      autoSpeed: 0.00006,
+      dragPixelsPerStep: 175,
+      momentumMultiplier: 0.9,
+      friction: 0.94,
 
       /* Look */
-      sideOpacity: 0.42,
-      backOpacity: 0.12,
-      sideScale: 0.76,
-      backScale: 0.55,
-      maxSideAngle: 63,
-      blurAmount: 0.25
+      maxTilt: 58,
+      minScale: 0.58,
+      backOpacity: 0.16,
+      blurAmount: 0.15
     };
 
     let cards = [];
@@ -162,8 +152,8 @@
     let velocity = 0;
 
     let isDragging = false;
-    let startX = 0;
-    let lastX = 0;
+    let startY = 0;
+    let lastY = 0;
     let lastTime = 0;
     let moved = false;
     let suppressClick = false;
@@ -227,10 +217,9 @@
       cards = projects.map(createCard);
     }
 
-    function circularDistance(a) {
+    function circularDistance(value) {
       const total = cards.length;
-      let d = ((a + total / 2) % total + total) % total - total / 2;
-      return d;
+      return ((value + total / 2) % total + total) % total - total / 2;
     }
 
     function playRelevantVideos() {
@@ -240,7 +229,7 @@
 
         const distance = Math.abs(circularDistance(index - offset));
 
-        if (distance < 1.7) {
+        if (distance < 1.65) {
           video.play().catch(() => {});
         } else {
           video.pause();
@@ -257,43 +246,36 @@
 
     function render() {
       const total = cards.length;
-      const radiusX = getCSSNumber("--radius-x") || 280;
-      const radiusZ = getCSSNumber("--radius-z") || 330;
+      const radiusY = getCSSNumber("--radius-y") || 240;
+      const radiusZ = getCSSNumber("--radius-z") || 340;
 
       cards.forEach((card, index) => {
-        const rawPosition = circularDistance(index - offset);
-        const angle = rawPosition * ((Math.PI * 2) / total);
+        const position = circularDistance(index - offset);
+        const angle = position * ((Math.PI * 2) / total);
 
-        const x = Math.sin(angle) * radiusX;
+        const y = Math.sin(angle) * radiusY;
         const z = Math.cos(angle) * radiusZ;
 
         const frontness = (Math.cos(angle) + 1) / 2;
-        const distance = Math.abs(rawPosition);
 
-        const rotateY = -Math.sin(angle) * settings.maxSideAngle;
+        const rotateX = Math.sin(angle) * settings.maxTilt;
         const scale =
-          settings.backScale +
-          (1 - settings.backScale) * Math.pow(frontness, 0.72);
+          settings.minScale +
+          (1 - settings.minScale) * Math.pow(frontness, 0.72);
 
         const opacity =
           settings.backOpacity +
-          (1 - settings.backOpacity) * Math.pow(frontness, 0.85);
+          (1 - settings.backOpacity) * Math.pow(frontness, 0.9);
 
         const blur = (1 - frontness) * settings.blurAmount;
         const zIndex = Math.round(frontness * 1000);
 
         card.style.transform =
-          `translate3d(calc(-50% + ${x}px), -50%, ${z - radiusZ}px) rotateY(${rotateY}deg) scale(${scale})`;
+          `translate3d(-50%, calc(-50% + ${y}px), ${z - radiusZ}px) rotateX(${rotateX}deg) scale(${scale})`;
 
         card.style.opacity = opacity;
         card.style.filter = `blur(${blur}px)`;
         card.style.zIndex = zIndex;
-
-        if (distance < 1.15) {
-          card.style.pointerEvents = "auto";
-        } else {
-          card.style.pointerEvents = "auto";
-        }
       });
 
       playRelevantVideos();
@@ -321,8 +303,8 @@
       moved = false;
       velocity = 0;
 
-      startX = event.clientX;
-      lastX = event.clientX;
+      startY = event.clientY;
+      lastY = event.clientY;
       lastTime = performance.now();
 
       unlockVideos();
@@ -334,19 +316,19 @@
       if (!isDragging) return;
 
       const now = performance.now();
-      const deltaX = event.clientX - lastX;
+      const deltaY = event.clientY - lastY;
       const deltaTime = Math.max(now - lastTime, 1);
 
-      if (Math.abs(event.clientX - startX) > 7) {
+      if (Math.abs(event.clientY - startY) > 7) {
         moved = true;
       }
 
-      const stepDelta = deltaX / settings.dragPixelsPerStep;
+      const stepDelta = deltaY / settings.dragPixelsPerStep;
 
       offset -= stepDelta;
       velocity = -(stepDelta / deltaTime) * settings.momentumMultiplier;
 
-      lastX = event.clientX;
+      lastY = event.clientY;
       lastTime = now;
     });
 
