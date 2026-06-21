@@ -1,377 +1,343 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="da">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>Liv & Mathias Vertical Carousel</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>Liv & Mathias — Mobil karussel</title>
 
-  <style>
-    :root {
-      --bg: transparent;
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
 
-      /* Card size */
-      --card-width: min(82vw, 360px);
-      --card-ratio: 16 / 9;
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: transparent;
+    overscroll-behavior: none;
+  }
 
-      /* Vertical carousel shape */
-      --radius-y: 255px;
-      --radius-z: 360px;
-    }
+  body {
+    position: fixed;
+    inset: 0;
+  }
 
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-    }
+  #stage {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: transparent;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
 
-    html,
-    body {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: var(--bg);
-      overscroll-behavior: none;
-      font-family: Arial, Helvetica, sans-serif;
-    }
+  #carousel {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 0;
+    height: 0;
+    transform-style: preserve-3d;
+  }
 
-    body {
-      position: fixed;
-      inset: 0;
-    }
+  .card {
+    position: absolute;
+    left: 0;
+    top: 0;
+    display: block;
+    overflow: hidden;
+    background: #1a1a1a;
+    transform-style: preserve-3d;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    cursor: pointer;
+    text-decoration: none;
+  }
 
-    .carousel {
-      position: fixed;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: transparent;
-      perspective: 950px;
-      perspective-origin: center center;
-      touch-action: none;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-
-    .card {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      width: var(--card-width);
-      aspect-ratio: var(--card-ratio);
-      display: block;
-      overflow: hidden;
-      background: #e8e8e8;
-      text-decoration: none;
-      color: inherit;
-      transform-style: preserve-3d;
-      transform-origin: center center;
-      will-change: transform, opacity, filter;
-      backface-visibility: hidden;
-      -webkit-backface-visibility: hidden;
-      cursor: pointer;
-    }
-
-    .card video,
-    .card img {
-      width: 100%;
-      height: 100%;
-      display: block;
-      object-fit: cover;
-      pointer-events: none;
-      background: #e8e8e8;
-    }
-
-    .placeholder {
-      position: absolute;
-      inset: 0;
-      display: grid;
-      place-items: center;
-      padding: 20px;
-      text-align: center;
-      font-size: 14px;
-      line-height: 1.15;
-      color: #111;
-      background: #d9d9d9;
-      pointer-events: none;
-    }
-
-    @media (max-height: 740px) {
-      :root {
-        --card-width: min(78vw, 320px);
-        --radius-y: 220px;
-        --radius-z: 320px;
-      }
-    }
-  </style>
+  .card video,
+  .card img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    pointer-events: none;
+    background: #1a1a1a;
+  }
+</style>
 </head>
 
 <body>
-  <main class="carousel" id="carousel" aria-label="Portfolio projects"></main>
+  <main id="stage" aria-label="Portfolio projekter">
+    <div id="carousel"></div>
+  </main>
 
   <script>
-    const projects = [
-      {
-        title: "Hvordan vil du huskes 01",
-        href: "https://livandmathias.com/hvordanvilduhuskes",
-        type: "video",
-        src: "assets/hvordanvilduhuskes.mp4"
-      },
-      {
-        title: "Hvordan vil du huskes 02",
-        href: "https://livandmathias.com/hvordanvilduhuskes",
-        type: "video",
-        src: "assets/hvordanvilduhuskes.mp4"
-      },
-      {
-        title: "Hvordan vil du huskes 03",
-        href: "https://livandmathias.com/hvordanvilduhuskes",
-        type: "video",
-        src: "assets/hvordanvilduhuskes.mp4"
-      }
+  (function () {
+    const stage = document.getElementById('stage');
+    const carousel = document.getElementById('carousel');
+
+    // ---------------------------------------------------------------
+    // PROJEKTER — rækkefølge, orientering, fil og link
+    // ---------------------------------------------------------------
+    const projekter = [
+      { navn: 'SAA new',            type: 'video', src: 'assets/SAA nyny.mp4',           orientering: 'landscape',     href: 'https://livandmathias.com/becomeanaddict' },
+      { navn: 'Pære',                type: 'video', src: 'assets/pærenye.mp4',            orientering: 'portrait-kort', href: 'https://livandmathias.com/paeren' },
+      { navn: 'FL01',                type: 'image', src: 'assets/FL01.png',               orientering: 'portrait',      href: 'https://livandmathias.com/flatlist' },
+      { navn: 'XBOX',                type: 'video', src: 'assets/XBOX FINAL.mp4',         orientering: 'landscape',     href: 'https://livandmathias.com/everyscreen' },
+      { navn: 'Livpic',              type: 'image', src: 'assets/livpic.png',             orientering: 'portrait-kort', href: 'https://livandmathias.com/about' },
+      { navn: 'Trusser',             type: 'video', src: 'assets/trusser.mp4',            orientering: 'landscape',     href: 'https://livandmathias.com/dischargetag' },
+      { navn: 'FL02',                type: 'image', src: 'assets/FL02.png',               orientering: 'portrait',      href: 'https://livandmathias.com/flatlist' },
+      { navn: 'Klovn',               type: 'video', src: 'assets/KlovnNYESTE.mp4',        orientering: 'portrait-kort', href: 'https://livandmathias.com/enpausefraalvoren' },
+      { navn: 'Hvordanvilduhuskes',  type: 'video', src: 'assets/hvordanvilduhuskes.mp4', orientering: 'landscape',     href: 'https://livandmathias.com/hvordanvilduhuskes' },
+      { navn: 'Mathiasny',           type: 'image', src: 'assets/mathiasny.png',          orientering: 'portrait-kort', href: 'https://livandmathias.com/about' },
+      { navn: 'FL03',                type: 'image', src: 'assets/FL03.png',               orientering: 'portrait',      href: 'https://livandmathias.com/flatlist' }
     ];
 
-    const carousel = document.getElementById("carousel");
+    const N = projekter.length;
 
+    // ---------------------------------------------------------------
+    // INDSTILLINGER — tunet sammen i prototypen
+    // ---------------------------------------------------------------
     const settings = {
-      autoSpeed: 0.00006,
-      dragPixelsPerStep: 175,
-      momentumMultiplier: 0.9,
-      friction: 0.94,
-
-      /* Look */
-      maxTilt: 58,
-      minScale: 0.58,
-      backOpacity: 0.16,
-      blurAmount: 0.15
+      perspective: 400,
+      landscapeW: 230,
+      portraitW: 150,
+      portraitHeightFactor: 0.82,
+      gapPx: 16,              // pixel-afstand fra bund af forrige kort til top af næste
+      minBrightness: 0.50,    // bagsideprojekter dæmpes til denne brightness, men forbliver synlige
+      autoSpeed: 0.18,        // auto-rotation hastighed (samme skala som test-prototypen)
+      friction: 0.93,
+      dragDivisor: 140,       // lavere = mere følsom swipe
+      velocityMultiplier: 14
     };
 
-    let cards = [];
-    let offset = 0;
-    let velocity = 0;
-
-    let isDragging = false;
-    let startY = 0;
-    let lastY = 0;
-    let lastTime = 0;
-    let moved = false;
-    let suppressClick = false;
-
-    function getCSSNumber(name) {
-      return parseFloat(
-        getComputedStyle(document.documentElement).getPropertyValue(name)
-      );
+    function dims(orientering) {
+      if (orientering === 'landscape') {
+        return { w: settings.landscapeW, h: settings.landscapeW * (9 / 16) };
+      }
+      if (orientering === 'portrait') {
+        return { w: settings.portraitW, h: settings.portraitW * (16 / 9) * settings.portraitHeightFactor };
+      }
+      // portrait-kort
+      return { w: settings.portraitW, h: settings.portraitW * (16 / 9) * settings.portraitHeightFactor * 0.72 };
     }
 
-    function createCard(project) {
-      const card = document.createElement("a");
-      card.className = "card";
-      card.href = project.href;
-      card.target = "_top";
-      card.rel = "noopener";
-      card.setAttribute("aria-label", project.title);
+    // ---------------------------------------------------------------
+    // BYG KORT
+    // ---------------------------------------------------------------
+    const cards = [];
 
-      if (project.type === "video") {
-        const video = document.createElement("video");
-        video.src = project.src;
+    projekter.forEach((p) => {
+      const card = document.createElement('a');
+      card.className = 'card';
+      card.href = p.href;
+      card.target = '_top';
+      card.rel = 'noopener';
+      card.setAttribute('aria-label', p.navn);
+
+      if (p.type === 'video') {
+        const video = document.createElement('video');
+        video.src = p.src;
         video.autoplay = true;
         video.muted = true;
         video.defaultMuted = true;
         video.loop = true;
         video.playsInline = true;
-        video.preload = "metadata";
-
-        video.setAttribute("muted", "");
-        video.setAttribute("playsinline", "");
-        video.setAttribute("webkit-playsinline", "");
-
-        video.addEventListener("error", () => {
-          const fallback = document.createElement("div");
-          fallback.className = "placeholder";
-          fallback.textContent = project.title + " — video not found";
-          card.appendChild(fallback);
-        });
-
+        video.preload = 'auto';
+        video.setAttribute('muted', '');
+        video.setAttribute('playsinline', '');
+        video.setAttribute('webkit-playsinline', '');
         card.appendChild(video);
       } else {
-        const img = document.createElement("img");
-        img.src = project.src;
-        img.alt = project.title;
-
-        img.addEventListener("error", () => {
-          const fallback = document.createElement("div");
-          fallback.className = "placeholder";
-          fallback.textContent = project.title + " — image not found";
-          card.appendChild(fallback);
-        });
-
+        const img = document.createElement('img');
+        img.src = p.src;
+        img.alt = p.navn;
         card.appendChild(img);
       }
 
       carousel.appendChild(card);
-      return card;
-    }
-
-    function build() {
-      cards = projects.map(createCard);
-    }
-
-    function circularDistance(value) {
-      const total = cards.length;
-      return ((value + total / 2) % total + total) % total - total / 2;
-    }
-
-    function playRelevantVideos() {
-      cards.forEach((card, index) => {
-        const video = card.querySelector("video");
-        if (!video) return;
-
-        const distance = Math.abs(circularDistance(index - offset));
-
-        if (distance < 1.65) {
-          video.play().catch(() => {});
-        } else {
-          video.pause();
-        }
-      });
-    }
+      cards.push(card);
+    });
 
     function unlockVideos() {
       cards.forEach((card) => {
-        const video = card.querySelector("video");
+        const video = card.querySelector('video');
         if (video) video.play().catch(() => {});
       });
     }
 
-    function render() {
-      const total = cards.length;
-      const radiusY = getCSSNumber("--radius-y") || 240;
-      const radiusZ = getCSSNumber("--radius-z") || 340;
+    // ---------------------------------------------------------------
+    // VINKEL-BEREGNING — kæde rundt om cylinderen, bund→top gap
+    // ---------------------------------------------------------------
+    let radius = 260;
+    let cardAngles = [];
 
-      cards.forEach((card, index) => {
-        const position = circularDistance(index - offset);
-        const angle = position * ((Math.PI * 2) / total);
+    function computeAngles() {
+      const dimsList = projekter.map((p) => dims(p.orientering));
+      const heights = dimsList.map((d) => d.h);
 
-        const y = Math.sin(angle) * radiusY;
-        const z = Math.cos(angle) * radiusZ;
+      const segments = heights.map((h, i) => h / 2 + settings.gapPx + heights[(i + 1) % N] / 2);
+      const circumference = segments.reduce((a, b) => a + b, 0);
+      radius = circumference / (Math.PI * 2);
 
-        const frontness = (Math.cos(angle) + 1) / 2;
-
-        const rotateX = Math.sin(angle) * settings.maxTilt;
-        const scale =
-          settings.minScale +
-          (1 - settings.minScale) * Math.pow(frontness, 0.72);
-
-        const opacity =
-          settings.backOpacity +
-          (1 - settings.backOpacity) * Math.pow(frontness, 0.9);
-
-        const blur = (1 - frontness) * settings.blurAmount;
-        const zIndex = Math.round(frontness * 1000);
-
-        card.style.transform =
-          `translate3d(-50%, calc(-50% + ${y}px), ${z - radiusZ}px) rotateX(${rotateX}deg) scale(${scale})`;
-
-        card.style.opacity = opacity;
-        card.style.filter = `blur(${blur}px)`;
-        card.style.zIndex = zIndex;
+      let acc = 0;
+      cardAngles = heights.map((h, i) => {
+        const center = (acc / circumference) * Math.PI * 2;
+        acc += segments[i];
+        return center;
       });
-
-      playRelevantVideos();
     }
 
-    function animate(time) {
-      if (!animate.last) animate.last = time;
-      const delta = Math.min(time - animate.last, 34);
-      animate.last = time;
+    // ---------------------------------------------------------------
+    // ROTATION STATE
+    // ---------------------------------------------------------------
+    let rotation = 0;
+    let velocity = 0;
+    let isDragging = false;
+    let startY = 0, lastY = 0, lastTime = 0, moved = false;
 
+    function norm(a) {
+      a = a % (Math.PI * 2);
+      if (a > Math.PI) a -= Math.PI * 2;
+      if (a < -Math.PI) a += Math.PI * 2;
+      return a;
+    }
+
+    function render() {
+      stage.style.perspective = settings.perspective + 'px';
+      stage.style.perspectiveOrigin = '50% 50%';
+
+      cards.forEach((card, i) => {
+        const p = projekter[i];
+        const { w, h } = dims(p.orientering);
+        card.style.width = w + 'px';
+        card.style.height = h + 'px';
+        card.style.marginLeft = (-w / 2) + 'px';
+        card.style.marginTop = (-h / 2) + 'px';
+
+        const baseAngle = cardAngles[i];
+        const angle = norm(baseAngle - rotation);
+
+        const y = -Math.sin(angle) * radius;
+        const z = Math.cos(angle) * radius - radius;
+        const rotateX = angle * (180 / Math.PI);
+
+        const frontness = (Math.cos(angle) + 1) / 2;
+        const brightness = settings.minBrightness + (1 - settings.minBrightness) * Math.pow(frontness, 1.2);
+
+        card.style.transform = `translate3d(0px, ${y}px, ${z}px) rotateX(${rotateX}deg)`;
+        card.style.zIndex = Math.round(frontness * 1000);
+        card.style.filter = `brightness(${brightness})`;
+        card.style.pointerEvents = frontness > 0.5 ? 'auto' : 'none';
+        card.style.cursor = frontness > 0.5 ? 'pointer' : 'default';
+      });
+    }
+
+    function getFrontIndex() {
+      let best = 0, bestDist = Infinity;
+      cards.forEach((c, i) => {
+        const angle = Math.abs(norm(cardAngles[i] - rotation));
+        if (angle < bestDist) { bestDist = angle; best = i; }
+      });
+      return best;
+    }
+
+    // ---------------------------------------------------------------
+    // ANIMATION LOOP
+    // ---------------------------------------------------------------
+    function animate() {
       if (!isDragging) {
-        offset += settings.autoSpeed * delta;
-        offset += velocity * delta;
-
-        velocity *= Math.pow(settings.friction, delta / 16.67);
-        if (Math.abs(velocity) < 0.000003) velocity = 0;
+        const autoSpeed = (settings.autoSpeed / 100) * 0.001;
+        rotation += autoSpeed;
+        rotation += velocity;
+        velocity *= settings.friction;
+        if (Math.abs(velocity) < 0.00005) velocity = 0;
       }
-
       render();
       requestAnimationFrame(animate);
     }
 
-    carousel.addEventListener("pointerdown", (event) => {
+    // ---------------------------------------------------------------
+    // TOUCH / POINTER HANDLING
+    // ---------------------------------------------------------------
+    let suppressClick = false;
+
+    stage.addEventListener('pointerdown', (e) => {
       isDragging = true;
       moved = false;
       velocity = 0;
-
-      startY = event.clientY;
-      lastY = event.clientY;
+      startY = e.clientY;
+      lastY = e.clientY;
       lastTime = performance.now();
-
       unlockVideos();
-
-      carousel.setPointerCapture?.(event.pointerId);
+      stage.setPointerCapture?.(e.pointerId);
     });
 
-    carousel.addEventListener("pointermove", (event) => {
+    stage.addEventListener('pointermove', (e) => {
       if (!isDragging) return;
-
       const now = performance.now();
-      const deltaY = event.clientY - lastY;
-      const deltaTime = Math.max(now - lastTime, 1);
-
-      if (Math.abs(event.clientY - startY) > 7) {
-        moved = true;
-      }
-
-      const stepDelta = deltaY / settings.dragPixelsPerStep;
-
-      offset -= stepDelta;
-      velocity = -(stepDelta / deltaTime) * settings.momentumMultiplier;
-
-      lastY = event.clientY;
+      const deltaY = e.clientY - lastY;
+      const dt = Math.max(now - lastTime, 1);
+      if (Math.abs(e.clientY - startY) > 6) moved = true;
+      const step = deltaY / settings.dragDivisor;
+      rotation += step;
+      velocity = (step / dt) * settings.velocityMultiplier;
+      lastY = e.clientY;
       lastTime = now;
     });
 
-    carousel.addEventListener("pointerup", (event) => {
+    stage.addEventListener('pointerup', (e) => {
       isDragging = false;
-      carousel.releasePointerCapture?.(event.pointerId);
+      stage.releasePointerCapture?.(e.pointerId);
 
       if (moved) {
         suppressClick = true;
-        setTimeout(() => {
-          suppressClick = false;
-        }, 130);
+        setTimeout(() => { suppressClick = false; }, 130);
+        return;
       }
+
+      // Ægte tap (ingen swipe) — naviger til det forreste projekt
+      const idx = getFrontIndex();
+      window.top.location.href = projekter[idx].href;
     });
 
-    carousel.addEventListener("pointercancel", () => {
+    stage.addEventListener('pointercancel', () => {
       isDragging = false;
     });
 
-    carousel.addEventListener(
-      "click",
-      (event) => {
-        if (suppressClick) {
-          event.preventDefault();
-          event.stopPropagation();
-        }
-      },
-      true
-    );
-
-    document.addEventListener("visibilitychange", () => {
-      if (document.hidden) {
-        cards.forEach((card) => {
-          const video = card.querySelector("video");
-          if (video) video.pause();
-        });
-      } else {
-        playRelevantVideos();
+    stage.addEventListener('click', (e) => {
+      if (suppressClick) {
+        e.preventDefault();
+        e.stopPropagation();
       }
+    }, true);
+
+    document.addEventListener('visibilitychange', () => {
+      cards.forEach((card) => {
+        const video = card.querySelector('video');
+        if (!video) return;
+        if (document.hidden) {
+          video.pause();
+        } else {
+          video.play().catch(() => {});
+        }
+      });
     });
 
-    build();
+    // ---------------------------------------------------------------
+    // INIT
+    // ---------------------------------------------------------------
+    computeAngles();
+    render();
     requestAnimationFrame(animate);
+  })();
   </script>
 </body>
 </html>
