@@ -112,7 +112,7 @@
       portraitHeightFactor: 0.82,
       gapPx: 16,              // pixel-afstand fra bund af forrige kort til top af næste
       minBrightness: 0.50,    // bagsideprojekter dæmpes til denne brightness, men forbliver synlige
-      autoSpeed: 0.18,        // auto-rotation hastighed (samme skala som test-prototypen)
+      autoSpeed: 0.0018,      // auto-rotation hastighed (radianer per frame)
       friction: 0.93,
       dragDivisor: 140,       // lavere = mere følsom swipe
       velocityMultiplier: 14
@@ -254,8 +254,7 @@
     // ---------------------------------------------------------------
     function animate() {
       if (!isDragging) {
-        const autoSpeed = (settings.autoSpeed / 100) * 0.001;
-        rotation += autoSpeed;
+        rotation += settings.autoSpeed;
         rotation += velocity;
         velocity *= settings.friction;
         if (Math.abs(velocity) < 0.00005) velocity = 0;
