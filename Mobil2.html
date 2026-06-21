@@ -55,8 +55,6 @@
     overflow: hidden;
     background: #1a1a1a;
     transform-style: preserve-3d;
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
     cursor: pointer;
     text-decoration: none;
   }
@@ -111,7 +109,7 @@
       portraitW: 150,
       portraitHeightFactor: 0.82,
       gapPx: 16,              // pixel-afstand fra bund af forrige kort til top af næste
-      minBrightness: 0.50,    // bagsideprojekter dæmpes til denne brightness, men forbliver synlige
+      minBrightness: 1.0,    // bagsideprojekter dæmpes til denne brightness, men forbliver synlige
       autoSpeed: 0.0018,      // auto-rotation hastighed (radianer per frame)
       friction: 0.93,
       dragDivisor: 140,       // lavere = mere følsom swipe
